@@ -34,6 +34,12 @@ export default {
                     targets.forEach(update);
                 }));
 
+        const firstMember = Object.keys(state.family.members).length < 2;
+        const cancel = doc.querySelector("#cancel");
+        if (firstMember) {
+            cancel.style.display = "none";
+        }
+
         form.addEventListener("submit", async (e) => {
             e.preventDefault();
             const data = new FormData(form);
@@ -52,7 +58,11 @@ export default {
                     }
                     : undefined,
             ).then(() => {
-                location.hash = "#";
+                if (firstMember) {
+                    location.hash = "#";
+                } else {
+                    history.back();
+                }
             })
             .catch(async (e) => {
                 ui.applyState(state);

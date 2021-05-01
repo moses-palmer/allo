@@ -1,0 +1,106 @@
+<section class="app" id="user">
+    <h1>
+        ${context.user.name}
+    </h1>
+
+    <section>
+        <h2 data-trans>
+            Information
+        </h2>
+        <p class="managed"></p>
+        <p data-trans>
+            Their e-mail address is ${context.user.email}.
+        </p>
+    </section>
+
+    <form class="for-child managed">
+        <h2 data-trans>
+            Allowance
+        </h2>
+        <p>
+            <span data-trans>Weekly allowance:</span>
+            <span>${currency.format.0}${context.allowance.amount}${currency.format.1}</span>.
+        </p>
+        <p>
+            <span data-trans>Allowance is paid on:</span>
+            <span class="managed"></span>.
+        </p>
+    </form>
+
+    <form class="for-parent managed">
+        <h2 data-trans>
+            Allowance
+        </h2>
+        <label for="allowance-amount" data-trans>
+            Weekly allowance:
+        </label>
+        <div class="row">
+            <span>${currency.format.0}</span>
+            <input
+                class="allowance-input"
+                type="number"
+                name="allowance-amount"
+
+                value="${context.allowance.amount}" />
+            <span>${currency.format.1}</span>
+        </div>
+
+        <label for="allowance-schedule" data-trans>
+            Pay allowance on:
+        </label>
+        <select class="allowance-input" name="allowance-schedule">
+            <option value="mon" data-trans>Mondays</option>
+            <option value="tue" data-trans>Tuesdays</option>
+            <option value="wed" data-trans>Wednesdays</option>
+            <option value="thu" data-trans>Thursdays</option>
+            <option value="fri" data-trans>Fridays</option>
+            <option value="sat" data-trans>Saturdays</option>
+            <option value="sun" data-trans>Sundays</option>
+        </select>
+    </form>
+
+    <section class="for-parent managed">
+        <h2 data-trans>
+            Remove ${context.user.name} from family
+        </h2>
+        <p data-trans>
+            Removing a family member will also remove all wishes and events.
+            This cannot be undone.
+        </p>
+        <div class="buttons row">
+            <input
+                type="button"
+                class="remove"
+                data-trans="value"
+                value="Remove from family" />
+        </div>
+    </section>
+
+    <div class="buttons row">
+        <input
+            type="button"
+            class="ok"
+            data-trans="value"
+            value="« Back"
+            onclick="history.back();"/>
+    </div>
+
+    <template class="remove">
+        <h2>${context.user.name}</h2>
+
+        <p data-trans>
+            Do you want to remove ${context.user.name} from the ${family.name}
+            family? This cannot be undone.
+        </p>
+
+        <form>
+            <label for="amount" data-trans>
+                Type the name of the family member to proceed:
+            </label>
+            <input
+                type="text"
+                class="managed"
+                required="required" />
+        </form>
+    </template>
+</section>
