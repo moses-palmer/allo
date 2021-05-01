@@ -46,6 +46,19 @@ const module = {
             "request/{}/{}".format(user, uid)),
 
         /**
+         * Gets a specific request.
+         *
+         * @param state
+         *     The application state.
+         * @param user
+         *     The unique ID of the user who made the request.
+         * @param request
+         *     The request ID.
+         */
+        get: (state, user, request) => module.get(
+            "request/{}/{}".format(user, request)),
+
+        /**
          * Grants a request.
          *
          * @param state
