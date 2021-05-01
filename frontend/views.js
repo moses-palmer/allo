@@ -1,5 +1,6 @@
 import api from "./api.js";
 import login from "./views/login.js";
+import make_request from "./views/make-request.js";
 import overview from "./views/overview.js";
 import register from "./views/register.js";
 
@@ -10,6 +11,7 @@ import register from "./views/register.js";
  */
 const module = {
     "login": login,
+    "make-request": make_request,
     "overview": overview,
     "register": register,
 
