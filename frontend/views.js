@@ -1,5 +1,6 @@
 import api from "./api.js";
 import add_member from "./views/add-member.js";
+import change_password from "./views/change-password.js";
 import family from "./views/family.js";
 import login from "./views/login.js";
 import make_request from "./views/make-request.js";
@@ -16,6 +17,7 @@ import user from "./views/user.js";
  */
 const module = {
     "add-member": add_member,
+    "change-password": change_password,
     "family": family,
     "login": login,
     "make-request": make_request,
