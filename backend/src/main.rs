@@ -45,6 +45,8 @@ async fn run() -> io::Result<()> {
             .app_data(Data::new(configuration.defaults()))
             // Persist session
             .wrap(configuration.session())
+            // Register server information endpoint
+            .service(api::server::handle)
             // Register API endpoints
             .service(api::family::register::handle)
             .service(api::overview::handle)
