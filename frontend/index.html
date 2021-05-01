@@ -1,0 +1,134 @@
+<!DOCTYPE HTML>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>Allo</title>
+
+        <meta
+            name="mobile-web-app-capable"
+            content="yes" />
+        <meta
+            name="viewport"
+            content="width=device-width,user-scalable=no" />
+
+
+        <link rel="shortcut icon" href="icon.svg" />
+        <link rel="stylesheet" type="text/css" href="style.css" />
+        <link rel="stylesheet" type="text/css" href="menu.css" />
+        <script src="app.js" type="module"></script>
+    </head>
+
+    <body class="loading">
+        <article id="main">
+            <section class="padding"></section>
+            <section class="menu">
+                <div class="content">
+                    <div class="padding"></div>
+                    <a href="#"><div class="menuitem"><svg
+                            class="logo"
+                            xmlns="http://www.w3.org/2000/svg"
+                            xmlns:xlink="http://www.w3.org/1999/xlink"
+                            id="logo"
+                            version="1.1"
+                            viewBox="-2 -2 33 14">
+                        <path
+                            class="bg icon"
+                            d="
+                                M 0 9.5
+                                l 0 -4.5
+                                a 5 5 0 1 1 10 0
+                                l 0 4.5
+                                M 0 7
+                                l 10 0" />
+                        <path
+                            class="bg"
+                            d="
+                                M 13 0.5
+                                l 0 9
+                                M 16 0.5
+                                l 0 9
+                                M 19 5
+                                a 5 5 0 1 1 10 0
+                                a 5 5 0 1 1 -10 0" />
+                        <path
+                            class="bg face icon"
+                            d="
+                                M 4.13 0.08
+                                A 5 5 0 0 0 2.89 0.47
+                                L 3.05 -1.20
+                                z
+                                M 2.5 0.667
+                                A 5 5 0 0 0 1.46 1.46
+                                L 1.04 -0.16
+                                z
+                                M 0 6
+                                l 0 -2
+                                l -1.5 0
+                                l 0 2
+                                z" />
+                        <path
+                            class="fg icon"
+                            d="
+                                M 0 9.5
+                                l 0 -4.5
+                                a 5 5 0 1 1 10 0
+                                l 0 4.5
+                                M 0 7
+                                l 10 0" />
+                        <path
+                            class="fg"
+                            d="
+                                M 13 0.5
+                                l 0 9
+                                M 16 0.5
+                                l 0 9
+                                M 19 5
+                                a 5 5 0 1 1 10 0
+                                a 5 5 0 1 1 -10 0" />
+                        <path
+                            class="fg face icon"
+                            d="
+                                M 4.13 0.08
+                                A 5 5 0 0 0 2.89 0.47
+                                L 3.05 -1.20
+                                z
+                                M 2.5 0.667
+                                A 5 5 0 0 0 1.46 1.46
+                                L 1.04 -0.16
+                                z
+                                M 0 6
+                                l 0 -2
+                                l -1.5 0
+                                l 0 2
+                                z" />
+                        <g
+                                transform="translate(24, 5)">
+                            <path
+                                class="ticker"
+                                d="
+                                    M -0.5 2.5
+                                    A 0.5 0.5 0 1 1 0.5 2.5
+                                    A 0.5 0.5 0 1 1 -0.5 2.5" />
+                        </g>
+                    </svg></div></a>
+                </div>
+            </section>
+        </article>
+        <div id="messages">
+            <template class="message-box template">
+                <div class="message-box">
+                    <div class="managed"></div>
+                    <hr/>
+                    <div class="buttons row managed"></div>
+                </div>
+                <template class="message template">
+                    <h2 class="managed"></h2>
+                    <p class="managed"></p>
+                </template>
+                <template class="message-box button template">
+                    <input type="button" />
+                </template>
+            </template>
+        </div>
+    </body>
+</html>
