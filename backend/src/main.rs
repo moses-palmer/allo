@@ -13,6 +13,7 @@ mod db;
 
 mod api;
 mod configuration;
+mod email;
 mod notifications;
 mod tasks;
 
