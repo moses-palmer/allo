@@ -50,6 +50,7 @@ async fn run() -> io::Result<()> {
             .service(api::family::register::handle)
             .service(api::overview::handle)
             .service(api::request::decline::handle)
+            .service(api::request::grant::handle)
             .service(api::request::make::handle)
             .service(api::session::introspect::handle)
             .service(api::session::login::handle)
