@@ -46,6 +46,11 @@ async fn run() -> io::Result<()> {
             .await
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?,
     );
+    let email_sender = Arc::new(
+        configuration
+            .email_sender()
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?,
+    );
     HttpServer::new(move || {
         App::new()
             // Grant access to the connection pool
@@ -54,6 +59,8 @@ async fn run() -> io::Result<()> {
             .app_data(Data::new(configuration.defaults()))
             // Grant access to the notifier
             .app_data(Data::new(notifier.clone()))
+            // Grant access to the email sender
+            .app_data(Data::new(email_sender.clone()))
             // Persist session
             .wrap(configuration.session())
             // Register server information endpoint
