@@ -7,6 +7,7 @@ import make_request from "./views/make-request.js";
 import overview from "./views/overview.js";
 import register from "./views/register.js";
 import request from "./views/request.js";
+import settings from "./views/settings.js";
 import transactions from "./views/transactions.js";
 import user from "./views/user.js";
 
@@ -24,6 +25,7 @@ const module = {
     "overview": overview,
     "register": register,
     "request": request,
+    "settings": settings,
     "transactions": transactions,
     "user": user,
 
