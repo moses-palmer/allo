@@ -14,6 +14,7 @@ pub mod request;
 pub mod server;
 pub mod session;
 pub mod transaction;
+pub mod user;
 
 /// The database executor used by the API functions.
 pub type Executor<'a> = db::Transaction<'a>;

@@ -354,6 +354,24 @@ const module = {
             }),
     },
 
+    user: {
+        /**
+         * Gets a specific user.
+         *
+         * @param state
+         *     The application state.
+         * @param user
+         *     The unique ID of the user.
+         */
+        get: (state, user) => module.get(
+            "user/{}".format(user))
+            .then(async r => {
+                state.family.members[user] = r.user;
+                await state.store();
+                return r;
+            }),
+    },
+
     /**
      * Retrieves information about the server.
      *
