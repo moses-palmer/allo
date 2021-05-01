@@ -1,4 +1,5 @@
 import VIEWS from "./views.js";
+import api from "./api.js";
 import connect from "./db.js";
 import * as State from "./state.js";
 import * as translation from "./translation.js";
@@ -74,6 +75,7 @@ const load = async () => {
     const state = await State.load(
         async () => {
             const result = await db.load() || {};
+            result.server = await api.server();
             return result;
         },
         async (v) => await db.store(v),
@@ -101,6 +103,8 @@ const load = async () => {
                 .then(translation.apply))
                 .body.innerHTML;
         }));
+
+    api.defaultErrorHandler(errorManager(_("Failed to contact Allo")));
 
     window.addEventListener("hashchange", (e) => {
         e.preventDefault();
