@@ -13,6 +13,7 @@ mod db;
 
 mod api;
 mod configuration;
+mod notifications;
 mod tasks;
 
 async fn run() -> io::Result<()> {
