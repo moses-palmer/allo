@@ -1,0 +1,96 @@
+<section class="app" id="overview">
+    <h1 data-trans>
+        Hi, ${me.name}!
+    </h1>
+
+    <section class="for-child">
+        <h2 data-trans>
+            My account
+        </h2>
+        <p data-trans>
+            I have ${account.balance.str} to spend.
+        </p>
+        <table id="my-transactions">
+            <caption data-trans>
+                Most recent events:
+            </caption>
+
+            <tbody>
+                <template>
+                    <tr>
+                        <td><div><a class="managed"></a></div></td>
+                        <td><div class="managed"></div></td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+    </section>
+
+    <section class="for-child">
+        <h2 data-trans>
+            My wishes
+        </h2>
+        <table id="my-requests">
+            <caption data-trans>
+                All wishes:
+            </caption>
+
+            <tbody>
+                <template>
+                    <tr>
+                        <td><div><a class="managed"></a></div></td>
+                        <td><div class="managed"></div></td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+    </section>
+
+    <section class="for-parent">
+        <h2 data-trans>
+            Wishes and balances
+        </h2>
+        <template id="family-requests">
+            <hr/>
+            <table class="collapsible collapsed empty">
+                <caption
+                    class="managed"
+                    onclick="this.parentNode.classList.toggle('collapsed')">
+                </caption>
+
+                <tbody>
+                    <template>
+                        <tr>
+                            <td><div class="managed"></div></td>
+                            <td><div class="managed"></div></td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </template>
+    </section>
+
+    <section class="for-parent">
+        <h2 data-trans>
+            Most recent events
+        </h2>
+        <template id="family-transactions">
+            <hr/>
+            <table class="collapsible collapsed empty">
+                <caption
+                    class="managed"
+                    onclick="this.parentNode.classList.toggle('collapsed')">
+                </caption>
+
+                <tbody>
+                    <template id="family-transactions-row">
+                        <tr>
+                            <td><div><a class="managed"></a></div></td>
+                            <td><div class="managed"></div></td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </template>
+    </section>
+</section>
