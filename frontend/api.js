@@ -370,6 +370,26 @@ const module = {
                 await state.store();
                 return r;
             }),
+
+        /**
+         * Updates the allowance for a child.
+         *
+         * @param state
+         *     The application state.
+         * @param user
+         *     The unique ID of the user.
+         * @param allowance
+         *     The unique ID of the allowance.
+         * @param amount
+         *     The new amount.
+         * @param schedule
+         *     The new schedule.
+         */
+        allowance: (state, user, allowance, amount, schedule) => module.put(
+            "user/{}/allowance/{}".format(user, allowance), {
+                amount,
+                schedule,
+            }),
     },
 
     /**
