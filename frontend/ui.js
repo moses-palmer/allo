@@ -513,3 +513,130 @@ export const requestRow = (state, tr, r) => {
     }
     return tr;
 };
+
+
+export const notification = {
+    /**
+     * Parses a notification from the backend.
+     *
+     * The returned value has the keys `action`, which is the action to take if
+     * the displayed notification is clicked, `title`, which is the
+     * notification title, and `body`, which is the notification body.
+     *
+     * If the event is unknown or should not be handled, nothing is returned.
+     *
+     * @param state
+     *     The application state.
+     * @param e
+     *     The event to parse.
+     * @return a description of the event.
+     */
+    parse: (state, e) => {
+        switch (e.type) {
+        case "AllowanceUpdated":
+            return {
+                action: () => {},
+                title: _("Allowance changed"),
+                body: e.allowance.user_uid === state.me.uid
+                    ? _("Your allowance was changed to {amount} by {parent}!")
+                        .format({
+                            amount: currency(state, e.allowance.amount),
+                            parent: state.family.members[e.by].name,
+                        })
+                    : _("{parent} updated {child}s allowance.")
+                        .format({
+                            parent: state.family.members[e.by].name,
+                            child: state.family.members[
+                                e.allowance.user_uid].name,
+                        }),
+            };
+        case "FamilyMemberAdded":
+            return {
+                action: () => location.hash = "#user"
+                    + "." + e.user.uid,
+                title: _("Family member added"),
+                body: _("A new member was added to your family: {user}!")
+                    .format({
+                        user: e.user.name,
+                    }),
+            };
+        case "FamilyMemberRemoved":
+            return {
+                action: () => location.hash = "#family",
+                title: _("Family member remove"),
+                body: _("A member was removed from your family: {user}!")
+                    .format({
+                        user: e.user.name,
+                    }),
+            };
+        case "RequestCreated":
+            return {
+                action: () => location.hash = "#request"
+                    + "." + e.request.user_uid
+                    + "." + e.request.uid,
+                title: _("Wish made"),
+                body: _("{user} has made a wish: {wish}.")
+                    .format({
+                        user: state.family.members[e.request.user_uid].name,
+                        wish: e.request.name,
+                    }),
+            };
+        case "RequestGranted":
+            return {
+                action: () => {},
+                title: _("Your wish has been granted!"),
+                body: _("{parent} granted your wish: {wish}.")
+                    .format({
+                        parent: state.family.members[e.by].name,
+                        wish: e.request.name,
+                    }),
+            };
+        case "RequestDeclined":
+            return {
+                action: () => {},
+                title: _("Your wish has been declined"),
+                body: _("{parent} declined your wish: {wish}.")
+                    .format({
+                        parent: state.family.members[e.by].name,
+                        wish: e.request.name,
+                    }),
+            };
+        }
+    },
+
+
+    /**
+     * Displays a notification.
+     *
+     * @param state
+     *     The applicaiton state.
+     * @param event
+     *     The notification event to display.
+     */
+    show: async (state, event) => {
+        if (state.notifications.enabled !== true) {
+            return;
+        }
+
+        try {
+            const parsed = notification.parse(state, event);
+            if (parsed !== undefined) {
+                const {action, title, body} = parsed;
+                try {
+                    await new Promise((resolve, reject) => {
+                        const notification = new Notification(title, {body});
+                        notification.onclick = resolve;
+                        notification.onclose = reject;
+                        notification.onerror = reject;
+                    });
+                    action();
+                } catch (e) {
+                    // Ignore
+                }
+            }
+        } catch (e) {
+            // Ignore rejected notifications and unknown events
+            console.log(`Failed to handle ${JSON.stringify(event)}: ${e}`);
+        }
+    },
+};

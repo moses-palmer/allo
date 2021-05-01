@@ -174,4 +174,7 @@ const TEMPLATE = {
         role: "",
         uid: "",
     },
+    notifications: {
+        enabled: undefined,
+    },
 };
