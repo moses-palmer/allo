@@ -222,6 +222,41 @@ const module = {
 
     family: {
         /**
+         * Adds a new family member.
+         *
+         * @param state
+         *     The application state.
+         * @param name
+         *     The name of the user.
+         * @param role
+         *     The user role.
+         * @param email
+         *     The email address.
+         * @param password
+         *     The user password.
+         * @param allowance
+         *     The child allowance on the format `{amount, schedule}`. This is
+         *     allowed only when adding a child.
+         * @return a future
+         */
+        add: (state, name, role, email, password, allowance) => module.post(
+            "family/{}".format(state.family.uid), {
+                user: { name, role, email },
+                allowance,
+                password,
+            })
+            .then(r => {
+                const user = r.user;
+                const members = listToMap([user], "uid");
+                state.update({
+                    family: {
+                        members,
+                    },
+                }).store();
+                return r;
+            }),
+
+        /**
          * Registers a new family.
          *
          * @param state
