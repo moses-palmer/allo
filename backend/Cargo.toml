@@ -4,6 +4,11 @@ version = "0.1.0"
 authors = ["Moses Palmér <mosespalmer@gmail.com>"]
 edition = "2021"
 
+[build-dependencies]
+resvg = "0.18"
+tiny-skia = "0.6"
+usvg = "0.18"
+
 [dependencies]
 actix = "0.12"
 actix-http = "3.0.0-rc.2"
