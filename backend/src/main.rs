@@ -42,6 +42,8 @@ async fn run() -> io::Result<()> {
             .data(connection_pool.clone())
             // Persist session
             .wrap(configuration.session())
+            // Register API endpoints
+            .service(api::session::login::handle)
     })
     .bind(bind)
     .unwrap()

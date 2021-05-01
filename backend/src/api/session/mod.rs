@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 use crate::api;
 use crate::db::values::{Role, UID};
 
+pub mod login;
+
 /// A log-in session.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct State {
