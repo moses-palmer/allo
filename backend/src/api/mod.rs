@@ -33,6 +33,11 @@ impl Error {
     pub fn unauthorized() -> Self {
         Self::Static(StatusCode::UNAUTHORIZED, "unauthorized")
     }
+
+    /// Generates an error indicating the requested resource does not exist.
+    pub fn not_found(reason: &'static str) -> Self {
+        Self::Static(StatusCode::NOT_FOUND, reason)
+    }
 }
 
 impl fmt::Display for Error {
