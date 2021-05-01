@@ -4,6 +4,11 @@ version = "0.1.0"
 authors = ["Moses Palmér <mosespalmer@gmail.com>"]
 edition = "2021"
 
+[build-dependencies]
+resvg = "0.18"
+tiny-skia = "0.6"
+usvg = "0.18"
+
 [dependencies]
 actix = "0.12"
 actix-http = "3.0.0-rc.2"
@@ -26,10 +31,19 @@ toml = "0.5"
 url = "2.2"
 uuid = { version = "0.8", features = ["v4"] }
 
+[dependencies.lettre]
+default-features = false
+version = "0.10.0-rc.4"
+features = ["builder", "serde", "tokio1", "tokio1-native-tls"]
+
 [dependencies.libsqlite3-sys]
 version  ="*"
 optional = true
 features= ["bundled"]
+
+[dependencies.pulldown-cmark]
+default-features = false
+version = "0.8"
 
 [dependencies.redis]
 version = "0.20.1"
@@ -49,6 +63,7 @@ version = "0.5"
 features = ["chrono", "migrate", "runtime-actix-rustls"]
 
 [features]
-default = ["db_sqlite", "notify_redis"]
+default = ["db_sqlite", "email_smtp", "notify_redis"]
 db_sqlite = ["libsqlite3-sys", "sqlx/sqlite"]
+email_smtp = ["lettre/smtp-transport", "lettre/tokio1-rustls-tls"]
 notify_redis = ["redis", "serde_cbor", "serial_test"]

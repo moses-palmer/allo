@@ -1,7 +1,9 @@
 use std::convert::{TryFrom, TryInto};
 use std::fs;
 use std::io;
+use std::path::PathBuf;
 
+use lettre::message::Mailbox;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use toml;
@@ -10,6 +12,9 @@ use crate::db;
 use crate::db::entities::Currency;
 use crate::db::values::UID;
 pub use crate::db::Configuration as Database;
+use crate::email;
+use crate::email::template::Language;
+pub use crate::email::Configuration as EMailTransport;
 use crate::notifications;
 pub use crate::notifications::Configuration as Notifier;
 
@@ -21,37 +26,58 @@ const SESSION_KEY_SIZE: usize = 32;
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Configuration {
     /// Server related configurations.
-    server: Server,
+    pub server: Server,
 
     /// Session related configurations.
-    session: Session,
+    pub session: Session,
 
     /// Database connection information.
-    database: Database,
+    pub database: Database,
 
     /// The configuration for the notifier.
-    notifier: Notifier,
+    pub notifier: Notifier,
+
+    /// The configuration for the email sender.
+    pub email: EMail,
 
     /// The default configuration to apply to families.
-    defaults: FamilyConfiguration,
+    pub defaults: FamilyConfiguration,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
-struct Server {
+pub struct Server {
+    /// The external URL for the frontend application.
+    pub url: String,
+
     /// The bind string.
-    bind: String,
+    pub bind: String,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
-struct Session {
+pub struct Session {
     /// The secret used to protect cookies.
-    secret: Secret<SESSION_KEY_SIZE>,
+    pub secret: Secret<SESSION_KEY_SIZE>,
 
     /// Whether the cookie should be secure.
-    secure: bool,
+    pub secure: bool,
 
     /// The name of the cookie
-    name: String,
+    pub name: String,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct EMail {
+    /// The file containing template definitions.
+    pub templates: PathBuf,
+
+    /// The default language to use when sending emails.
+    pub default_language: Language,
+
+    /// The name of the sender.
+    pub from: Mailbox,
+
+    /// The transport configuration.
+    pub transport: EMailTransport,
 }
 
 /// A key used internally to maintain secrets.
@@ -64,13 +90,13 @@ struct Session {
 #[serde(try_from = "String")]
 pub struct Secret<const SIZE: usize> {
     /// The key.
-    key: [u8; SIZE],
+    pub key: [u8; SIZE],
 }
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct FamilyConfiguration {
     /// The currency used by this family.
-    currency: Currency,
+    pub currency: Currency,
 }
 
 impl Configuration {
@@ -102,6 +128,23 @@ impl Configuration {
         T: Clone + Send + Sync + Serialize + 'static,
     {
         notifications::Notifier::<T>::new(&self.notifier).await
+    }
+
+    /// An email sender.
+    ///
+    /// This method will load the templates indicated in the configuration and
+    /// generate an email transport.
+    pub fn email_sender(
+        &self,
+    ) -> Result<
+        email::Sender<impl lettre::AsyncTransport>,
+        Box<dyn ::std::error::Error + Send + Sync>,
+    > {
+        Ok(email::Sender::new(
+            email::Templates::load(&self.email.templates)?,
+            self.email.from.clone(),
+            self.email.transport.transport()?,
+        ))
     }
 
     /// A session generator.
