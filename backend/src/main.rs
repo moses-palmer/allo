@@ -44,6 +44,7 @@ async fn run() -> io::Result<()> {
             // Persist session
             .wrap(configuration.session())
             // Register API endpoints
+            .service(api::family::register::handle)
             .service(api::session::login::handle)
     })
     .bind(bind)

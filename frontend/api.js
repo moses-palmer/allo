@@ -69,6 +69,50 @@ const module = {
             }),
     },
 
+    family: {
+        /**
+         * Registers a new family.
+         *
+         * @param state
+         *     The application state.
+         * @param userName
+         *     The name of the main family user.
+         * @param familyName
+         *     The name of the family.
+         * @param email
+         *     The email address of the main family user.
+         * @param password
+         *     The user password.
+         * @return a future
+         */
+        register: (state, userName, familyName, email, password) => module.post(
+            "family", {
+                family: {
+                    name: familyName,
+                },
+                user: {
+                    email,
+                    name: userName,
+                },
+                password: password,
+            })
+            .then(r => {
+                const me = r.user;
+                state.update({
+                    me: {
+                        uid: me.uid,
+                        name: me.name,
+                        email: me.email,
+                        role: me.role,
+                    },
+                    family: {
+                        uid: me.family_uid,
+                    },
+                }).store();
+                return r;
+            }),
+    },
+
     /**
      * Retrieves information about the server.
      *
