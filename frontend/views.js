@@ -6,6 +6,7 @@ import overview from "./views/overview.js";
 import register from "./views/register.js";
 import request from "./views/request.js";
 import transactions from "./views/transactions.js";
+import user from "./views/user.js";
 
 /**
  * The views of the application.
@@ -20,6 +21,7 @@ const module = {
     "register": register,
     "request": request,
     "transactions": transactions,
+    "user": user,
 
     /**
      * Attempts to calculate the next view given an application state.
