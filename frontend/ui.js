@@ -489,7 +489,8 @@ export const transactionRow = (state, tr, t) => {
 /**
  * Updates a table rows with a request description.
  *
- * The column order is expected to be description, amount.
+ * The column order is expected to be description, amount. The description will
+ * become clickable if a request is specified.
  *
  * @param state
  *     The applicaiton state.
@@ -502,9 +503,12 @@ export const requestRow = (state, tr, r) => {
     const [description, amount] = managed(tr);
     if (r) {
         description.innerText = r.name;
+        description.onclick = () => location.href =
+            `#request.${r.user_uid}.${r.uid}`;
         amount.innerText = currency(state, r.amount);
     } else {
         description.innerHTML = "&nbsp;";
+        description.onclick = () => {};
         amount.innerHTML = "&nbsp;";
     }
     return tr;
