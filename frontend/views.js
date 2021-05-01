@@ -1,5 +1,6 @@
 import api from "./api.js";
 import login from "./views/login.js";
+import overview from "./views/overview.js";
 import register from "./views/register.js";
 
 /**
@@ -9,6 +10,7 @@ import register from "./views/register.js";
  */
 const module = {
     "login": login,
+    "overview": overview,
     "register": register,
 
     /**
@@ -30,6 +32,9 @@ const module = {
         } catch (e) {
             return "login";
         }
+
+        // Default to the overview
+        return "overview";
     },
 };
 
