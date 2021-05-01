@@ -1,11 +1,13 @@
 import api from "./api.js";
 import add_member from "./views/add-member.js";
+import family from "./views/family.js";
 import login from "./views/login.js";
 import make_request from "./views/make-request.js";
 import overview from "./views/overview.js";
 import register from "./views/register.js";
 import request from "./views/request.js";
 import transactions from "./views/transactions.js";
+import user from "./views/user.js";
 
 /**
  * The views of the application.
@@ -14,12 +16,14 @@ import transactions from "./views/transactions.js";
  */
 const module = {
     "add-member": add_member,
+    "family": family,
     "login": login,
     "make-request": make_request,
     "overview": overview,
     "register": register,
     "request": request,
     "transactions": transactions,
+    "user": user,
 
     /**
      * Attempts to calculate the next view given an application state.

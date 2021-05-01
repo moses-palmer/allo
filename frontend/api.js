@@ -335,6 +335,61 @@ const module = {
                 }).store();
                 return r;
             }),
+
+        /**
+         * Removes a user from a family.
+         *
+         * @param state
+         *     The application state.
+         * @param user
+         *     The unique ID of the user.
+         * @return a future
+         */
+        remove: (state, user) => module.remove(
+            "family/{}/{}".format(state.family.uid, user))
+            .then(async r => {
+                delete state.family.members[user];
+                await state.store();
+                return r;
+            }),
+    },
+
+    user: {
+        /**
+         * Gets a specific user.
+         *
+         * @param state
+         *     The application state.
+         * @param user
+         *     The unique ID of the user.
+         */
+        get: (state, user) => module.get(
+            "user/{}".format(user))
+            .then(async r => {
+                state.family.members[user] = r.user;
+                await state.store();
+                return r;
+            }),
+
+        /**
+         * Updates the allowance for a child.
+         *
+         * @param state
+         *     The application state.
+         * @param user
+         *     The unique ID of the user.
+         * @param allowance
+         *     The unique ID of the allowance.
+         * @param amount
+         *     The new amount.
+         * @param schedule
+         *     The new schedule.
+         */
+        allowance: (state, user, allowance, amount, schedule) => module.put(
+            "user/{}/allowance/{}".format(user, allowance), {
+                amount,
+                schedule,
+            }),
     },
 
     /**
