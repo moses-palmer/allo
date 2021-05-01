@@ -334,6 +334,7 @@ dependencies = [
  "redis",
  "serde",
  "serde_cbor",
+ "serde_json",
  "serial_test",
  "sqlx",
  "toml",
