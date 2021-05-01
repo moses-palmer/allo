@@ -12,6 +12,7 @@ pub mod overview;
 pub mod request;
 pub mod server;
 pub mod session;
+pub mod transaction;
 
 /// A general grouping of errors returned by this API.
 #[derive(Debug, PartialEq)]
