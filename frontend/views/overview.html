@@ -71,6 +71,10 @@
                     </template>
                 </tbody>
             </table>
+
+            <div class="buttons row">
+                <a class="managed"></a>
+            </div>
         </template>
     </section>
 
@@ -97,4 +101,36 @@
             </table>
         </template>
     </section>
+
+    <template class="gift template">
+        <h2 class="managed"></h2>
+        <form>
+            <label for="amount" data-trans>
+                Amount:
+            </label>
+            <div class="row">
+                <span class="managed"></span>
+                <input
+                    class="managed"
+                    type="number"
+                    required="required" />
+                <span class="managed"></span>
+            </div>
+
+            <label for="description" data-trans>
+                Why?
+            </label>
+            <input
+                class="managed"
+                type="text"
+                data-trans="placeholder"
+
+                placeholder="Because you cleaned your room"
+                required="required" />
+        </form>
+        <p data-trans>
+            If you specify a negative amount, it will be deducted
+            from your child's balance.
+        </p>
+    </template>
 </section>
