@@ -8,11 +8,139 @@ use futures::stream::BoxStream;
 
 use crate::api;
 use crate::api::session::State;
-use crate::db::values::UID;
+use crate::db;
+use crate::db::entities::User;
+use crate::db::values::{Role, UID};
 use crate::notifications::{Error, Notifications, Notifier};
 
 mod events;
 pub use self::events::Event;
+
+/// A notification targeted at family members.
+pub enum Notify {
+    /// Sends a notification to a single user.
+    Member { event: Event, user: UID },
+
+    /// Sends a notification to all family members.
+    Family { event: Event, family: UID },
+
+    /// Notifies a single family member and their parents.
+    MemberAndParents { event: Event, uid: UID, family: UID },
+
+    /// Sends a notification to all parents.
+    Parents { event: Event, family: UID },
+}
+
+impl Notify {
+    /// Sends a notification to all affected users.
+    ///
+    /// If any error occurs during the operation, they are logged, but the
+    /// error is then ignored.
+    ///
+    /// # Arguments
+    /// *  `conn` - A database connection.
+    /// *  `notifier` - The notifier to use.
+    /// *  `from` - The user that initiated the event. This user will not be
+    ///    notified.
+    pub async fn send<'b, E>(
+        self,
+        conn: E,
+        notifier: &Notifier<Event>,
+        from: &UID,
+    ) where
+        E: sqlx::Executor<'b, Database = db::Database>,
+    {
+        let event = self.event();
+        for uid in self.users(conn, from).await {
+            let channel = uid.to_string();
+            if let Err(e) = notifier.send(&channel, event).await {
+                log::warn!("failed to send notification to {}: {}", channel, e);
+            }
+        }
+    }
+
+    /// Extracts the event to send.
+    fn event(&self) -> &Event {
+        use Notify::*;
+        match self {
+            Member { event, .. }
+            | Family { event, .. }
+            | MemberAndParents { event, .. }
+            | Parents { event, .. } => event,
+        }
+    }
+
+    /// Lists all users that should be notified by this event.
+    ///
+    /// If any error occurs during the operation, they are logged, but the
+    /// error is then ignored. In this case, an empty list is returned.
+    ///
+    /// # Arguments
+    /// *  `conn` - A database connection.
+    /// *  `notifier` - The notifier to use.
+    /// *  `from` - The user that initiated the event. This user will not be
+    ///    included.
+    async fn users<'b, E>(&self, conn: E, from: &UID) -> Vec<UID>
+    where
+        E: sqlx::Executor<'b, Database = db::Database>,
+    {
+        use Notify::*;
+        match self {
+            Member { user, .. } => vec![user.clone()],
+            Family { family, .. } => {
+                self.members(conn, family, |u| u.uid() != from).await
+            }
+            MemberAndParents { uid, family, .. } => {
+                self.members(conn, family, |u| {
+                    (u.uid() == uid || u.role() == &Role::Parent)
+                        && u.uid() != from
+                })
+                .await
+            }
+            Parents { family, .. } => {
+                self.members(conn, family, |u| {
+                    u.role() == &Role::Parent && u.uid() != from
+                })
+                .await
+            }
+        }
+    }
+
+    /// Loads all members of a family.
+    ///
+    /// If any error occurs during the operation, they are logged, but the
+    /// error is then ignored. In this case, an empty list is returned.
+    ///
+    ///# Arguments
+    /// *  `conn` - The database connection.
+    /// *  `family_uid` - The unique ID of the family.
+    async fn members<'b, E, F>(
+        &self,
+        conn: E,
+        family_uid: &UID,
+        predicate: F,
+    ) -> Vec<UID>
+    where
+        E: sqlx::Executor<'b, Database = db::Database>,
+        F: Fn(&User) -> bool,
+    {
+        User::read_for_family(conn, family_uid)
+            .await
+            .unwrap_or_else(|e| {
+                log::warn!("failed to load family: {}", e);
+                vec![]
+            })
+            .into_iter()
+            .filter_map(|u| {
+                if predicate(&u) {
+                    Some(u.uid().clone())
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+}
 
 /// Data for the notification web socket.
 struct NotificationSocket {
