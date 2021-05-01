@@ -153,4 +153,15 @@ const merge = (template, target, source) => Object.entries(template)
  */
 const TEMPLATE = {
     server: {},
+    family: {
+        members: {},
+        name: "",
+        uid: "",
+    },
+    me: {
+        email: "",
+        name: "",
+        role: "",
+        uid: "",
+    },
 };
