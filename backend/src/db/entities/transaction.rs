@@ -1,5 +1,7 @@
 use std::ops::Range;
 
+use either::Either;
+use futures::StreamExt;
 use sqlx::prelude::*;
 
 use crate::db::values::{Timestamp, TransactionType, UID};
@@ -31,6 +33,24 @@ entity!(
 );
 
 impl Transaction {
+    /// The SQL statement used to create a transaction with an automatic UID.
+    const CREATE_WITH_AUTO_UID: &'static str = concat!(
+        "INSERT INTO Transactions (transaction_type, user_uid, description, \
+            amount, time) \
+        VALUES (",
+        parameter!(transaction_type),
+        ", ",
+        parameter!(user_uid),
+        ", ",
+        parameter!(description),
+        ", ",
+        parameter!(amount),
+        ", ",
+        parameter!(time),
+        "); ",
+        last_row_id!(),
+    );
+
     /// The SQL statement used to load transactions for a user.
     const READ_FOR_USER_LIMIT: &'static str =
         concat!(
@@ -51,6 +71,51 @@ impl Transaction {
         WHERE user_uid = ",
         parameter!(user_uid),
     );
+
+    /// Creates a transaction in the database, delegating selection of UID.
+    ///
+    /// # Arguments
+    /// *  `e` - The database executor.
+    /// *  `transaction_type` - The transaction type.
+    /// *  `user_uid` - The user UID.
+    /// *  `description` - A description.
+    /// *  `amount` - The amount. Negative amounts are withdrawals.
+    /// *  `time` - The timestamp of the transaction.
+    pub async fn create_with_auto_uid<'a, E>(
+        e: E,
+        transaction_type: TransactionType,
+        user_uid: UID,
+        description: String,
+        amount: i64,
+        time: Timestamp,
+    ) -> Result<Self, crate::db::Error>
+    where
+        E: ::sqlx::Executor<'a, Database = crate::db::Database>,
+    {
+        let mut stream = sqlx::query(Self::CREATE_WITH_AUTO_UID)
+            .bind(transaction_type)
+            .bind(user_uid.clone())
+            .bind(description.clone())
+            .bind(amount)
+            .bind(time)
+            .fetch_many(e);
+        while let Some(e) = stream.next().await {
+            if let Either::Right(row) = e? {
+                let uid =
+                    row.get::<<Self as crate::db::entities::Entity>::Key, _>(0);
+                return Ok(Self {
+                    uid,
+                    transaction_type,
+                    user_uid,
+                    description,
+                    amount,
+                    time,
+                });
+            }
+        }
+
+        Err(crate::db::Error::RowNotFound)
+    }
 
     /// Loads transactions for a user.
     ///
@@ -126,10 +191,47 @@ mod impl_tests {
     use std::time::Duration;
 
     use crate::db::entities::create;
+    use crate::db::entities::Entity;
     use crate::db::test_pool;
     use crate::db::values::Role;
 
     use super::*;
+
+    #[actix_rt::test]
+    async fn create_with_auto_uid() {
+        let pool = test_pool().await;
+        {
+            let mut c = pool.acquire().await.unwrap();
+
+            let family = create::family(&mut c, "Family");
+            let user = create::user(
+                &mut c,
+                Role::Parent,
+                "User 1",
+                "test1@example.com",
+                family.uid(),
+            );
+
+            let transaction = Transaction::create_with_auto_uid(
+                &mut c,
+                TransactionType::Gift,
+                user.uid().clone(),
+                "description".into(),
+                42,
+                Timestamp::now(),
+            )
+            .await
+            .unwrap();
+
+            assert_eq!(
+                Some(&transaction),
+                Transaction::read(&mut c, transaction.uid())
+                    .await
+                    .unwrap()
+                    .as_ref(),
+            );
+        }
+    }
 
     #[actix_rt::test]
     async fn read_for_user_limit() {

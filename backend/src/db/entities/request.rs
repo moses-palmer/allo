@@ -1,3 +1,7 @@
+use either::Either;
+use futures::StreamExt;
+use sqlx::prelude::*;
+
 use crate::db::values::{Timestamp, UID, URL};
 
 entity!(
@@ -30,6 +34,25 @@ entity!(
 );
 
 impl Request {
+    /// The SQL statement used to create a transaction with an automatic UID.
+    const CREATE_WITH_AUTO_UID: &'static str = concat!(
+        "INSERT INTO Requests (user_uid, name, description, amount, url, time) \
+        VALUES (",
+        parameter!(user_uid),
+        ", ",
+        parameter!(name),
+        ", ",
+        parameter!(description),
+        ", ",
+        parameter!(amount),
+        ", ",
+        parameter!(url),
+        ", ",
+        parameter!(time),
+        "); ",
+        last_row_id!(),
+    );
+
     /// The SQL statement used to load all requests from a user.
     const READ_FOR_USER: &'static str = concat!(
         "SELECT Requests.uid, user_uid, Requests.name, description, amount, \
@@ -49,6 +72,55 @@ impl Request {
         WHERE Users.family_uid = ",
         parameter!(user_uid),
     );
+
+    /// Creates a transaction in the database, delegating selection of UID.
+    ///
+    /// # Arguments
+    /// *  `e` - The database executor.
+    /// *  `user_uid` - The user UID.
+    /// *  `name` - A short name.
+    /// *  `description` - A description.
+    /// *  `amount` - The amount. This should generally be a positive value.
+    /// *  `url` - An optional URL describing the request.
+    /// *  `time` - The timestamp of the request.
+    pub async fn create_with_auto_uid<'a, E>(
+        e: E,
+        user_uid: UID,
+        name: String,
+        description: String,
+        amount: i64,
+        url: Option<URL>,
+        time: Timestamp,
+    ) -> Result<Self, crate::db::Error>
+    where
+        E: ::sqlx::Executor<'a, Database = crate::db::Database>,
+    {
+        let mut stream = sqlx::query(Self::CREATE_WITH_AUTO_UID)
+            .bind(user_uid.clone())
+            .bind(name.clone())
+            .bind(description.clone())
+            .bind(amount)
+            .bind(url.clone())
+            .bind(time)
+            .fetch_many(e);
+        while let Some(e) = stream.next().await {
+            if let Either::Right(row) = e? {
+                let uid =
+                    row.get::<<Self as crate::db::entities::Entity>::Key, _>(0);
+                return Ok(Self {
+                    uid,
+                    user_uid,
+                    name,
+                    description,
+                    amount,
+                    url,
+                    time,
+                });
+            }
+        }
+
+        Err(crate::db::Error::RowNotFound)
+    }
 
     /// Loads all requests for a user.
     ///
@@ -117,10 +189,45 @@ mod impl_tests {
     use actix_rt;
 
     use crate::db::entities::create;
+    use crate::db::entities::Entity;
     use crate::db::test_pool;
     use crate::db::values::Role;
 
     use super::*;
+
+    #[actix_rt::test]
+    async fn create_with_auto_uid() {
+        let pool = test_pool().await;
+        {
+            let mut c = pool.acquire().await.unwrap();
+
+            let family = create::family(&mut c, "Family");
+            let user = create::user(
+                &mut c,
+                Role::Parent,
+                "User 1",
+                "test1@example.com",
+                family.uid(),
+            );
+
+            let request = Request::create_with_auto_uid(
+                &mut c,
+                user.uid().clone(),
+                "name".into(),
+                "description".into(),
+                42,
+                None,
+                Timestamp::now(),
+            )
+            .await
+            .unwrap();
+
+            assert_eq!(
+                Some(&request),
+                Request::read(&mut c, request.uid()).await.unwrap().as_ref(),
+            );
+        }
+    }
 
     #[actix_rt::test]
     async fn read_for_user() {

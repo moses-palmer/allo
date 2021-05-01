@@ -30,6 +30,76 @@ const module = {
      */
     ERROR_CLASS: "error",
 
+    request: {
+        /**
+         * Declines a request.
+         *
+         * @param state
+         *     The application state.
+         * @param user
+         *     The unique ID of the user making the request.
+         * @param uid
+         *     The unique ID of the request.
+         * @return a future
+         */
+        decline: (state, user, uid) => module.remove(
+            "request/{}/{}".format(user, uid)),
+
+        /**
+         * Gets a specific request.
+         *
+         * @param state
+         *     The application state.
+         * @param user
+         *     The unique ID of the user who made the request.
+         * @param request
+         *     The request ID.
+         */
+        get: (state, user, request) => module.get(
+            "request/{}/{}".format(user, request)),
+
+        /**
+         * Grants a request.
+         *
+         * @param state
+         *     The application state.
+         * @param user
+         *     The unique ID of the user making the request.
+         * @param uid
+         *     The unique ID of the request.
+         * @param cost
+         *     An optional cost to override the value in the request.
+         * @return a future
+         */
+        grant: (state, user, uid, cost) => module.post(
+            "request/{}/{}".format(user, uid), {
+                cost,
+            }),
+
+        /**
+         * Creates a request.
+         *
+         * @param state
+         *     The application state.
+         * @param name
+         *     A short name.
+         * @param description
+         *     A description of the request.
+         * @param amount
+         *     The cost of the item.
+         * @param url
+         *     An optional URL with more information.
+         * @return a future
+         */
+        make: (state, name, description, amount, url) => module.post(
+            "request/{}".format(state.me.uid), {
+                name,
+                description,
+                amount,
+                url: url ? url : undefined,
+            }),
+    },
+
     /**
      * Retrieves an account overview.
      *
