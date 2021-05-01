@@ -1,19 +1,24 @@
 use sqlx::prelude::*;
 
+use std::sync::Arc;
+
 use actix_session::Session;
 use actix_web::{post, web, HttpRequest, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
 
 use crate::api;
+use crate::api::notify::{Event, Notify};
 use crate::api::session::State;
 use crate::db;
 use crate::db::entities::{request, Request};
 use crate::db::values::{Role, Timestamp, UID};
+use crate::notifications::Notifier;
 
 /// Generates a user request.
 #[post("request/{user_uid}")]
 pub async fn handle(
     pool: web::Data<db::Pool>,
+    notifier: web::Data<Arc<Notifier<Event>>>,
     session: Session,
     req: web::Json<Req>,
     user_uid: web::Path<UID>,
@@ -24,11 +29,20 @@ pub async fn handle(
     {
         let res = execute(
             &mut trans,
-            state,
+            state.clone(),
             &req.into_inner(),
             &user_uid.into_inner(),
         )
         .await?;
+        Notify::Parents {
+            event: Event::RequestCreated {
+                request: res.request.clone(),
+                by: state.user_uid.clone(),
+            },
+            family: state.family_uid,
+        }
+        .send(&mut *trans, &notifier, &state.user_uid)
+        .await;
         trans.commit().await?;
         Ok(res)
     }

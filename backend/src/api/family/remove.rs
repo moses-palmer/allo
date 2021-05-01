@@ -1,19 +1,24 @@
 use sqlx::prelude::*;
 
+use std::sync::Arc;
+
 use actix_session::Session;
 use actix_web::{delete, web, HttpRequest, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
 
 use crate::api;
+use crate::api::notify::{Event, Notify};
 use crate::api::session::State;
 use crate::db;
 use crate::db::entities::{Entity, User};
 use crate::db::values::{Role, UID};
+use crate::notifications::Notifier;
 
 /// Removes a member from a family.
 #[delete("family/{family_uid}/{user_uid}")]
 pub async fn handle(
     pool: web::Data<db::Pool>,
+    notifier: web::Data<Arc<Notifier<Event>>>,
     session: Session,
     path: web::Path<(UID, UID)>,
 ) -> Result<Res, api::Error> {
@@ -22,7 +27,17 @@ pub async fn handle(
     let state = State::load(&session)?;
     let (family_uid, user_uid) = path.into_inner();
     {
-        let res = execute(&mut trans, state, &family_uid, &user_uid).await?;
+        let res =
+            execute(&mut trans, state.clone(), &family_uid, &user_uid).await?;
+        Notify::Family {
+            event: Event::FamilyMemberRemoved {
+                user: res.user.clone(),
+                by: state.user_uid.clone(),
+            },
+            family: state.family_uid,
+        }
+        .send(&mut *trans, &notifier, &state.user_uid)
+        .await;
         trans.commit().await?;
 
         Ok(res)
