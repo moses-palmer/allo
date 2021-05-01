@@ -196,7 +196,6 @@ export const managed = (el, classes) => el.querySelectorAll(
 
 
 /**
- * Applies a mode to an element tree.
  *
  * This will hide all managed elements with the additional classes in `modes`,
  * except those with the class `mode`.
@@ -213,6 +212,52 @@ export const applyMode = (el, modes, mode) => modes
         .forEach((e) => e.style.display = m === mode
             ? "initial"
             : "none"));
+
+
+/**
+ * Selects an element and removes it from the document.
+ *
+ * The return value is the the array `[element, parent]`.
+ *
+ * @param doc
+ *     The document from which to select the element.
+ * @param selector
+ *     The selector.
+ */
+export const extractElement = (doc, selector) => {
+    const el = doc.querySelector(selector);
+    if (el !== null) {
+        const parent = el.parentNode;
+        parent.removeChild(el);
+        return [el, parent];
+    }
+};
+
+
+/**
+ * Removes a parent of which `el` is a child.
+ *
+ * The first parent of type `type` is removed.
+ *
+ * @param el
+ *     The element from which to start the search.
+ * @param tag
+ *     The tag name of the parent to remove. Since this is compared to the
+ *     `tagName` attribute of elements, it should be an upper case string.
+ * @return whether an element was removed
+ */
+export const removeParent = (el, tag) => {
+    let e = el;
+    while (e && e.tagName !== tag) {
+        e = e.parentNode;
+    }
+    if (e && e.remove) {
+        e.remove();
+        return true;
+    } else {
+        return false;
+    }
+};
 
 
 /**
@@ -333,4 +378,134 @@ export const applyState = (state) => {
     }
 
     return state;
+}
+
+/**
+ * Converts a numerical value to a currency string.
+ *
+ * @param state
+ *     The application state.
+ * @param amount
+ *     The currency amount.
+ */
+export const currency = (state, amount) => (
+    state.currency.format[0]
+    + new Intl.NumberFormat().format(amount)
+    + state.currency.format[1]);
+
+
+/**
+ * Converts a date to a date string.
+ *
+ * @param state
+ *     The application state.
+ * @param time
+ *     The timestamp.
+ */
+export const date = (state, time) => new Intl.DateTimeFormat(
+    "default", {dateStyle: "medium"}).format(time);
+
+
+/**
+ * Converts a date to a timestamp string.
+ *
+ * @param state
+ *     The application state.
+ * @param time
+ *     The timestamp.
+ */
+export const timestamp = (state, time) => new Intl.DateTimeFormat(
+    "default", {dateStyle: "medium", timeStyle: "short"}).format(time);
+
+
+/**
+ * Displays a transaction in a modal view.
+ *
+ * @param state
+ *     The application state.
+ * @param transaction
+ *     The transaction to display.
+ */
+export const transaction = async (state, transaction, buttons) => {
+    const body = messageBoxTemplate(".transaction.template")
+        .content.cloneNode(true);
+    const [description, kind, time, amount] =
+        managed(body);
+    switch (transaction.transaction_type) {
+    case "allowance":
+        description.innerText = _("Allowance on {}")
+            .format(date(state, new Date(Date.parse(transaction.time))));
+        kind.innerText = _("Allowance");
+        break;
+    case "gift":
+        description.innerText = transaction.description;
+        kind.innerText = _("Gift");
+        break;
+    case "request":
+        description.innerText = transaction.description;
+        kind.innerText = _("Fulfilled wish");
+        break;
+    }
+    time.innerText = timestamp(state, new Date(Date.parse(transaction.time)));
+    amount.innerText = currency(state, transaction.amount);
+    return await show(
+        body,
+        [
+            {text: _("Close"), classes: ["ok"]},
+        ].concat(buttons ? buttons : []));
+};
+
+
+/**
+ * Updates a table rows with a transaction description.
+ *
+ * The column order is expected to be description, amount. The description will
+ * become clickable if a transaction is specified.
+ *
+ * @param state
+ *     The applicaiton state.
+ * @param tr
+ *     The table row element.
+ * @param t
+ *     The transaction to display. If this is undefined, the row is cleared.
+ */
+export const transactionRow = (state, tr, t) => {
+    const [description, amount] = managed(tr);
+    if (t) {
+        description.innerText = t.transaction_type == "allowance"
+            ? _("Allowance")
+            : t.description;
+        description.onclick = () => transaction(state, t);
+        amount.innerText = currency(state, t.amount);
+    } else {
+        description.innerHTML = "&nbsp;";
+        description.onclick = () => {};
+        amount.innerHTML = "&nbsp;";
+    }
+    return tr;
+};
+
+
+/**
+ * Updates a table rows with a request description.
+ *
+ * The column order is expected to be description, amount.
+ *
+ * @param state
+ *     The applicaiton state.
+ * @param tr
+ *     The table row element.
+ * @param r
+ *     The request to display. If this is undefined, the row is cleared.
+ */
+export const requestRow = (state, tr, r) => {
+    const [description, amount] = managed(tr);
+    if (r) {
+        description.innerText = r.name;
+        amount.innerText = currency(state, r.amount);
+    } else {
+        description.innerHTML = "&nbsp;";
+        amount.innerHTML = "&nbsp;";
+    }
+    return tr;
 };

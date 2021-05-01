@@ -9,6 +9,7 @@ use crate::db;
 
 pub mod family;
 pub mod overview;
+pub mod server;
 pub mod session;
 
 /// A general grouping of errors returned by this API.
