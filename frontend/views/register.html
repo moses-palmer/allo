@@ -1,0 +1,80 @@
+<section class="app" id="register">
+    <h1 data-trans>
+        Register an Allo account
+    </h1>
+
+    <form id="form">
+        <label for="family-name" data-trans>
+            The name of your family:
+        </label>
+        <input
+            type="text"
+            name="family-name"
+            data-trans="placeholder"
+
+            autocomplete="family-name"
+            placeholder="Family name"
+            required="required" />
+
+        <hr/>
+
+        <label for="user-name" data-trans>
+            Your name:
+        </label>
+        <input
+            type="text"
+            name="user-name"
+            data-trans="placeholder"
+
+            autocomplete="given-name"
+            placeholder="Name"
+            required="required" />
+
+        <label for="user-email" data-trans>
+            Your email address:
+        </label>
+        <input
+            type="email"
+            name="user-email"
+            data-trans="placeholder"
+
+            autocomplete="email"
+            placeholder="email@example.com" />
+
+        <hr/>
+
+        <label for="password" data-trans>
+            Select a password:
+        </label>
+        <input
+            type="password"
+            name="password"
+            data-trans="placeholder"
+
+            autocomplete="new-password"
+            minlength="6"
+            placeholder="Password"
+            required="required" />
+        <input
+            type="password"
+            data-trans="placeholder"
+
+            autocomplete="new-password"
+            placeholder="Confirm password"
+            required="required" />
+
+        <div class="row buttons">
+            <input
+                type="submit"
+                id="submit"
+                data-trans="value"
+
+                value="Register" />
+        </div>
+    </form>
+
+    <p>
+        <span data-trans>Do you already have an account?</span>
+        <a href="#login" data-trans>Log in!</a>
+    </p>
+</section>
