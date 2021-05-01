@@ -32,6 +32,20 @@ const module = {
 
     request: {
         /**
+         * Declines a request.
+         *
+         * @param state
+         *     The application state.
+         * @param user
+         *     The unique ID of the user making the request.
+         * @param uid
+         *     The unique ID of the request.
+         * @return a future
+         */
+        decline: (state, user, uid) => module.remove(
+            "request/{}/{}".format(user, uid)),
+
+        /**
          * Creates a request.
          *
          * @param state
