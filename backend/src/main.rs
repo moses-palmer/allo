@@ -40,6 +40,8 @@ async fn run() -> io::Result<()> {
         App::new()
             // Grant access to the connection pool
             .data(connection_pool.clone())
+            // Publish the default configuration
+            .data(configuration.defaults())
             // Persist session
             .wrap(configuration.session())
             // Register API endpoints
