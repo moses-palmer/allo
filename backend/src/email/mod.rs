@@ -1,7 +1,7 @@
 mod sender;
 pub mod template;
 
-pub use self::sender::Sender;
+pub use self::sender::{Error, Sender};
 pub use self::template::Templates;
 
 pub mod dummy;
