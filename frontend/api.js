@@ -335,6 +335,23 @@ const module = {
                 }).store();
                 return r;
             }),
+
+        /**
+         * Removes a user from a family.
+         *
+         * @param state
+         *     The application state.
+         * @param user
+         *     The unique ID of the user.
+         * @return a future
+         */
+        remove: (state, user) => module.remove(
+            "family/{}/{}".format(state.family.uid, user))
+            .then(async r => {
+                delete state.family.members[user];
+                await state.store();
+                return r;
+            }),
     },
 
     /**
