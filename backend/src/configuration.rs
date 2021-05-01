@@ -46,6 +46,9 @@ pub struct Configuration {
 
 #[derive(Clone, Deserialize, Serialize)]
 struct Server {
+    /// The external URL for the frontend application.
+    url: String,
+
     /// The bind string.
     bind: String,
 }
