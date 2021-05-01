@@ -8,6 +8,7 @@ use serde::Serialize;
 
 use crate::db;
 
+pub mod family;
 pub mod session;
 
 /// The database executor used by the API functions.
