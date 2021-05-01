@@ -7,6 +7,10 @@ pub use sqlx::sqlite::SqliteConnectOptions as ConnectOptions;
 /// The database type.
 pub type Database = sqlx::Sqlite;
 
+/// A migrator for the database schema.
+pub const MIGRATOR: sqlx::migrate::Migrator =
+    sqlx::migrate!("src/db/migrations/sqlite/");
+
 /// The database configuration, in the form of a connection string.
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Configuration {
@@ -43,6 +47,8 @@ pub async fn test_pool() -> super::Pool {
     )
     .await
     .unwrap();
+
+    MIGRATOR.run(&pool).await.unwrap();
 
     pool
 }
