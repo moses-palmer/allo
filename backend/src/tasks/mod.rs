@@ -11,6 +11,8 @@ use sqlx::Acquire;
 use crate::db;
 use crate::db::values::Timestamp;
 
+pub mod allowance;
+
 /// A repeating collection of tasks.
 pub struct Scheduled {
     /// A database pool used by this manager and the tasks.

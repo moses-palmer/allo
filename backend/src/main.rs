@@ -29,6 +29,12 @@ async fn run() -> io::Result<()> {
         .run(&connection_pool)
         .await
         .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+    let tasks_connection_pool = connection_pool.clone();
+    let _scheduler = Supervisor::start(|_| {
+        tasks::Scheduled::new(tasks_connection_pool).with(
+            tasks::ScheduledTask::Daily(Box::new(tasks::allowance::Payer)),
+        )
+    });
     HttpServer::new(move || {
         App::new()
             // Grant access to the connection pool
