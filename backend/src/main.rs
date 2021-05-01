@@ -48,6 +48,7 @@ async fn run() -> io::Result<()> {
             // Register server information endpoint
             .service(api::server::handle)
             // Register API endpoints
+            .service(api::family::add::handle)
             .service(api::family::register::handle)
             .service(api::overview::handle)
             .service(api::request::decline::handle)
