@@ -40,6 +40,7 @@ async fn run() -> io::Result<()> {
             tasks::ScheduledTask::Daily(Box::new(tasks::allowance::Payer)),
         )
     });
+    let server_configuration = Arc::new(configuration.clone());
     let notifier = Arc::new(
         configuration
             .notifier::<api::notify::Event>()
@@ -53,6 +54,8 @@ async fn run() -> io::Result<()> {
     );
     HttpServer::new(move || {
         App::new()
+            // Grant access to the server configuration
+            .app_data(Data::new(server_configuration.clone()))
             // Grant access to the connection pool
             .app_data(Data::new(connection_pool.clone()))
             // Publish the default configuration
