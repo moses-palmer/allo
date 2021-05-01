@@ -7,7 +7,12 @@ use serde::{Deserialize, Serialize};
 
 pub mod dummy;
 
+#[cfg(not(feature = "notify_redis"))]
 pub use dummy as driver;
+
+#[cfg(feature = "notify_redis")]
+#[path = "redis.rs"]
+pub mod driver;
 
 pub use driver::{Configuration, Notifier};
 

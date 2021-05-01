@@ -30,10 +30,24 @@ version  ="*"
 optional = true
 features= ["bundled"]
 
+[dependencies.redis]
+version = "0.20.1"
+optional = true
+features = ["aio", "tokio-comp"]
+
+[dependencies.serde_cbor]
+version = "0.11"
+optional = true
+
+[dependencies.serial_test]
+version = "0.5.1"
+optional = true
+
 [dependencies.sqlx]
 version = "0.5"
 features = ["chrono", "migrate", "runtime-actix-rustls"]
 
 [features]
-default = ["db_sqlite"]
+default = ["db_sqlite", "notify_redis"]
 db_sqlite = ["libsqlite3-sys", "sqlx/sqlite"]
+notify_redis = ["redis", "serde_cbor", "serial_test"]
