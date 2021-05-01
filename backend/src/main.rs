@@ -3,6 +3,7 @@ use actix::prelude::*;
 use std::env;
 use std::io;
 use std::process::exit;
+use std::sync::Arc;
 
 use actix_web::{App, HttpServer};
 use env_logger;
@@ -37,12 +38,20 @@ async fn run() -> io::Result<()> {
             tasks::ScheduledTask::Daily(Box::new(tasks::allowance::Payer)),
         )
     });
+    let notifier = Arc::new(
+        configuration
+            .notifier::<api::notify::Event>()
+            .await
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?,
+    );
     HttpServer::new(move || {
         App::new()
             // Grant access to the connection pool
             .data(connection_pool.clone())
             // Publish the default configuration
             .data(configuration.defaults())
+            // Grant access to the notifier
+            .data(notifier.clone())
             // Persist session
             .wrap(configuration.session())
             // Register server information endpoint
