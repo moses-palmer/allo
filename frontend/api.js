@@ -46,6 +46,24 @@ const module = {
             "request/{}/{}".format(user, uid)),
 
         /**
+         * Grants a request.
+         *
+         * @param state
+         *     The application state.
+         * @param user
+         *     The unique ID of the user making the request.
+         * @param uid
+         *     The unique ID of the request.
+         * @param cost
+         *     An optional cost to override the value in the request.
+         * @return a future
+         */
+        grant: (state, user, uid, cost) => module.post(
+            "request/{}/{}".format(user, uid), {
+                cost,
+            }),
+
+        /**
          * Creates a request.
          *
          * @param state
