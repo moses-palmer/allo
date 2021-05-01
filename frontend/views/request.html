@@ -1,0 +1,76 @@
+<section class="app" id="request">
+    <section>
+        <h2>
+            ${context.user.name} - ${context.request.name}
+        </h2>
+
+        <p>
+            ${context.request.description}
+        </p>
+
+        <a class="managed" href="${context.request.url}" target="_blank">
+            ${context.request.url}
+        </a>
+        <iframe sandbox class="managed" src="${context.request.url}"></iframe>
+
+        <div class="buttons row">
+            <input
+                class="managed remove for-parent"
+                type="button"
+                data-trans="value"
+                value="Decline" />
+            <input
+                class="managed add for-parent"
+                type="button"
+                data-trans="value"
+                value="Grant" />
+        </div>
+    </section>
+
+    <div class="buttons row">
+        <input
+            class="ok"
+            type="button"
+            data-trans="value"
+            value="« Back"
+            onclick="history.back()" />
+    </div>
+
+    <template class="decline">
+        <h2>${context.request.name}</h2>
+
+        <p>
+            ${context.request.description}
+        </p>
+
+        <p data-trans>
+            Do you want to decline this wish?
+        </p>
+    </template>
+
+    <template class="grant">
+        <h2>${context.request.name}</h2>
+
+        <p>
+            ${context.request.description}
+        </p>
+
+        <form>
+            <label for="amount" data-trans>
+                Cost:
+            </label>
+            <div class="row">
+                <span>${currency.format.0}</span>
+                <input
+                    type="number"
+                    class="managed"
+                    value="${context.request.amount}" />
+                <span>${currency.format.1}</span>
+            </div>
+        </form>
+
+        <p data-trans>
+            Do you want to grant this wish?
+        </p>
+    </template>
+</section>
