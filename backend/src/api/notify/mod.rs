@@ -176,6 +176,7 @@ impl Actor for NotificationSocket {
 impl StreamHandler<Result<Event, Error>> for NotificationSocket {
     fn handle(&mut self, msg: Result<Event, Error>, ctx: &mut Self::Context) {
         match msg {
+            Ok(Event::Logout {}) => ctx.close(None),
             Ok(event) => match serde_json::ser::to_string(&event) {
                 Ok(json) => ctx.text(json),
                 Err(e) => {

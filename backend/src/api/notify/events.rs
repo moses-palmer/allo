@@ -13,6 +13,9 @@ pub enum Event {
     /// An empty ping message.
     Ping {},
 
+    /// The user has logged out.
+    Logout {},
+
     /// The allowance for a user was updated.
     AllowanceUpdated {
         /// The new allowance.
