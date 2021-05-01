@@ -26,58 +26,58 @@ const SESSION_KEY_SIZE: usize = 32;
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Configuration {
     /// Server related configurations.
-    server: Server,
+    pub server: Server,
 
     /// Session related configurations.
-    session: Session,
+    pub session: Session,
 
     /// Database connection information.
-    database: Database,
+    pub database: Database,
 
     /// The configuration for the notifier.
-    notifier: Notifier,
+    pub notifier: Notifier,
 
     /// The configuration for the email sender.
-    email: EMail,
+    pub email: EMail,
 
     /// The default configuration to apply to families.
-    defaults: FamilyConfiguration,
+    pub defaults: FamilyConfiguration,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
-struct Server {
+pub struct Server {
     /// The external URL for the frontend application.
-    url: String,
+    pub url: String,
 
     /// The bind string.
-    bind: String,
+    pub bind: String,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
-struct Session {
+pub struct Session {
     /// The secret used to protect cookies.
-    secret: Secret<SESSION_KEY_SIZE>,
+    pub secret: Secret<SESSION_KEY_SIZE>,
 
     /// Whether the cookie should be secure.
-    secure: bool,
+    pub secure: bool,
 
     /// The name of the cookie
-    name: String,
+    pub name: String,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
-struct EMail {
+pub struct EMail {
     /// The file containing template definitions.
-    templates: PathBuf,
+    pub templates: PathBuf,
 
     /// The default language to use when sending emails.
-    default_language: Language,
+    pub default_language: Language,
 
     /// The name of the sender.
-    from: Mailbox,
+    pub from: Mailbox,
 
     /// The transport configuration.
-    transport: EMailTransport,
+    pub transport: EMailTransport,
 }
 
 /// A key used internally to maintain secrets.
@@ -90,13 +90,13 @@ struct EMail {
 #[serde(try_from = "String")]
 pub struct Secret<const SIZE: usize> {
     /// The key.
-    key: [u8; SIZE],
+    pub key: [u8; SIZE],
 }
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct FamilyConfiguration {
     /// The currency used by this family.
-    currency: Currency,
+    pub currency: Currency,
 }
 
 impl Configuration {
