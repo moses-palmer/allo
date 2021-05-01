@@ -8,6 +8,8 @@ use serde::Serialize;
 
 use crate::db;
 
+pub mod session;
+
 /// The database executor used by the API functions.
 pub type Executor<'a> = db::Transaction<'a>;
 
