@@ -30,6 +30,45 @@ const module = {
      */
     ERROR_CLASS: "error",
 
+    session: {
+        /**
+         * Performs log in.
+         *
+         * If the request is successful, the state is updated.
+         *
+         * @param state
+         *     The application state.
+         * @param email
+         *     The user email address.
+         * @param password
+         *     The user password.
+         * @return a future
+         */
+        login: (state, email, password) => module.post(
+            "session/login", {
+                email,
+                password,
+                email,
+                password,
+            })
+            .then(async r => {
+                const me = r.user;
+                await state.clear();
+                await state.update({
+                    me: {
+                        uid: me.uid,
+                        name: me.name,
+                        email: me.email,
+                        role: me.role,
+                    },
+                    family: {
+                        uid: me.family_uid,
+                    },
+                }).store();
+                return r;
+            }),
+    },
+
     /**
      * Retrieves information about the server.
      *

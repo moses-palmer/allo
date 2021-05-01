@@ -43,6 +43,8 @@ async fn run() -> io::Result<()> {
             .app_data(Data::new(connection_pool.clone()))
             // Persist session
             .wrap(configuration.session())
+            // Register API endpoints
+            .service(api::session::login::handle)
     })
     .bind(bind)
     .unwrap()
