@@ -3,6 +3,7 @@
 #[path = "sqlite.rs"]
 mod driver;
 
+pub mod entities;
 pub mod values;
 
 pub use self::driver::{Configuration, Database, MIGRATOR};
