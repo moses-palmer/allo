@@ -74,6 +74,7 @@ async fn run() -> io::Result<()> {
             .service(api::transaction::list::handle)
             .service(api::user::allowance::handle)
             .service(api::user::get::handle)
+            .route("/notify", actix_web::web::get().to(api::notify::handle))
     })
     .bind(bind)
     .unwrap()
