@@ -1,15 +1,19 @@
 use sqlx::prelude::*;
 
+use std::sync::Arc;
+
 use actix_session::Session;
 use actix_web::http::StatusCode;
 use actix_web::{post, web, HttpRequest, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
 
 use crate::api;
+use crate::api::notify::{Event, Notify};
 use crate::api::session::State;
 use crate::db;
 use crate::db::entities::{allowance, user, Entity, Password, User};
 use crate::db::values::{PasswordHash, Role, UID};
+use crate::notifications::Notifier;
 
 /// Adds a new member to a family.
 ///
@@ -17,6 +21,7 @@ use crate::db::values::{PasswordHash, Role, UID};
 #[post("family/{family_uid}")]
 pub async fn handle(
     pool: web::Data<db::Pool>,
+    notifier: web::Data<Arc<Notifier<Event>>>,
     session: Session,
     req: web::Json<Req>,
     path: web::Path<UID>,
@@ -27,7 +32,17 @@ pub async fn handle(
     let family_uid = path.into_inner();
     {
         let res =
-            execute(&mut trans, state, &req.into_inner(), &family_uid).await?;
+            execute(&mut trans, state.clone(), &req.into_inner(), &family_uid)
+                .await?;
+        Notify::Family {
+            event: Event::FamilyMemberAdded {
+                user: res.user.clone(),
+                by: state.user_uid.clone(),
+            },
+            family: state.family_uid,
+        }
+        .send(&mut *trans, &notifier, &state.user_uid)
+        .await;
         trans.commit().await?;
         Ok(res)
     }

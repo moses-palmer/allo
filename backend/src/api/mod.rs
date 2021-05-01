@@ -6,8 +6,10 @@ use actix_web::http::StatusCode;
 use actix_web::ResponseError;
 
 use crate::db;
+use crate::notifications;
 
 pub mod family;
+pub mod notify;
 pub mod overview;
 pub mod request;
 pub mod server;
@@ -120,6 +122,13 @@ impl From<db::Error> for Error {
                 )
             }
         }
+    }
+}
+
+impl From<notifications::Error> for Error {
+    fn from(source: notifications::Error) -> Self {
+        log::error!("An unexpected notification error occurred: {}", source);
+        Error::Static(StatusCode::NOT_FOUND, "no notifications")
     }
 }
 
