@@ -1,0 +1,47 @@
+<section class="app" id="family">
+    <h1 data-trans>
+        The ${family.name} family
+    </h1>
+
+    <section>
+        <h2 data-trans>
+            Members:
+        </h2>
+
+        <table id="parents">
+            <caption data-trans>
+                Parents:
+            </caption>
+            <tbody>
+                <template>
+                    <tr>
+                        <td><div><a class="managed"></a></div></td>
+                        <td><div class="managed"></div></td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+
+        <hr/>
+
+        <table id="children">
+            <caption data-trans>
+                Children:
+            </caption>
+            <tbody>
+                <template>
+                    <tr>
+                        <td><div><a class="managed"></a></div></td>
+                        <td><div class="managed"></div></td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+
+        <div class="buttons row">
+            <a class="for-parent" href="#add-member" data-trans>
+                Add a new member!
+            </a>
+        </div>
+    </section>
+</section>
