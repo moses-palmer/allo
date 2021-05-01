@@ -3,9 +3,12 @@ use std::fs;
 use std::io;
 
 use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
 use toml;
 
 use crate::db;
+use crate::db::entities::Currency;
+use crate::db::values::UID;
 pub use crate::db::Configuration as Database;
 
 use actix_session::CookieSession as SessionStorage;
@@ -23,6 +26,9 @@ pub struct Configuration {
 
     /// Database connection information.
     database: Database,
+
+    /// The default configuration to apply to families.
+    defaults: FamilyConfiguration,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -56,6 +62,12 @@ pub struct Secret<const SIZE: usize> {
     key: [u8; SIZE],
 }
 
+#[derive(Clone, Deserialize, Serialize)]
+pub struct FamilyConfiguration {
+    /// The currency used by this family.
+    currency: Currency,
+}
+
 impl Configuration {
     /// Loads the application configuration from a TOML file.
     ///
@@ -79,6 +91,11 @@ impl Configuration {
     /// A session generator.
     pub fn session(&self) -> SessionStorage {
         self.session.storage()
+    }
+
+    /// The default configuration.
+    pub fn defaults(&self) -> FamilyConfiguration {
+        self.defaults.clone()
     }
 }
 
@@ -146,5 +163,59 @@ impl Session {
         SessionStorage::signed(&self.secret.key)
             .secure(self.secure)
             .name(&self.name)
+    }
+}
+
+impl FamilyConfiguration {
+    const READ: &'static str = concat!(
+        "SELECT family_uid, Currencies.name as name, \
+        Currencies.format as format
+        FROM Configurations \
+        LEFT JOIN Currencies \
+            ON Configurations.currency = Currencies.name \
+        WHERE Configurations.family_uid = ",
+        parameter!(family_uid),
+    );
+
+    /// Creates a new family configuration.
+    ///
+    /// # Arguments
+    /// *  `currency` - The currency to use.
+    #[cfg(test)]
+    pub fn new(currency: Currency) -> Self {
+        Self { currency }
+    }
+
+    /// Loads an item of this kind from the database.
+    ///
+    /// If no item corresponding to the keys exists, `Ok(None)` is
+    /// returned.
+    ///
+    /// # Arguments
+    /// *  `e` - The database executor.
+    /// *  `family_uid` - The unique ID of the family whose configuration to
+    ///    retrieve.
+    pub async fn read<'a, E>(
+        e: E,
+        family_uid: &UID,
+    ) -> Result<Option<Self>, db::Error>
+    where
+        E: ::sqlx::Executor<'a, Database = crate::db::Database>,
+    {
+        if let Some(row) = sqlx::query(Self::READ)
+            .bind(family_uid)
+            .fetch_optional(e)
+            .await?
+        {
+            let currency = Currency::from_row(&row)?;
+            Ok(Some(Self { currency }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// The currency used by this family.
+    pub fn currency(&self) -> &Currency {
+        &self.currency
     }
 }

@@ -153,6 +153,16 @@ const merge = (template, target, source) => Object.entries(template)
  */
 const TEMPLATE = {
     server: {},
+    account: {
+        balance: {
+            num: 0,
+            str: "",
+        }
+    },
+    currency: {
+        format: ["", ""],
+        name: "",
+    },
     family: {
         members: {},
         name: "",
