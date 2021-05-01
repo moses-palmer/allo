@@ -8,6 +8,7 @@ use actix_web::ResponseError;
 use crate::db;
 
 pub mod family;
+pub mod overview;
 pub mod session;
 
 /// A general grouping of errors returned by this API.
