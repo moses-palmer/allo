@@ -5,6 +5,7 @@ import make_request from "./views/make-request.js";
 import overview from "./views/overview.js";
 import register from "./views/register.js";
 import request from "./views/request.js";
+import transactions from "./views/transactions.js";
 
 /**
  * The views of the application.
@@ -18,6 +19,7 @@ const module = {
     "overview": overview,
     "register": register,
     "request": request,
+    "transactions": transactions,
 
     /**
      * Attempts to calculate the next view given an application state.

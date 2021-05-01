@@ -103,7 +103,13 @@ export default {
                 "#family-transactions",
                 state.context.transactions,
                 transactionRow,
-                (child) => child.name);
+                (child) => child.name,
+                (child, table) => {
+                    const [_name, link] = ui.managed(table);
+                    link.innerText = _("See all for {}")
+                            .format(child.name);
+                    link.href = `#transactions.${child.uid}`;
+                });
             parentTable(
                 "#family-requests",
                 state.context.requests,

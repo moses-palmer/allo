@@ -1,0 +1,45 @@
+<section class="app" id="overview">
+    <h1 data-trans>
+        Events for ${context.user.name}
+    </h1>
+
+    <section>
+        <table id="transactions">
+            <caption data-trans>
+                Events:
+            </caption>
+
+            <tbody>
+                <template>
+                    <tr>
+                        <td><div><a class="managed"></a></div></td>
+                        <td><div class="managed"></div></td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+
+        <div class="buttons panel">
+            <input
+                class="managed"
+                type="button"
+                data-trans="value"
+                value="« Earlier" />
+            <input
+                class="managed"
+                type="button"
+                data-trans="value"
+                value="Later »" />
+        </div>
+
+        <hr/>
+
+        <div class="buttons row">
+            <input
+                type="button"
+                data-trans="value"
+                value="« Back"
+                onclick="history.back()" />
+        </div>
+    </section>
+</section>
