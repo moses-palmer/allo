@@ -1,0 +1,75 @@
+<section class="app" id="make-request">
+    <h1 data-trans>
+        Make a wish!
+    </h1>
+
+    <form id="form">
+        <label for="name" data-trans>
+            I would like:
+        </label>
+        <input
+            type="text"
+            name="name"
+            data-trans="placeholder"
+
+            placeholder="A fabulous..."
+            required="required" />
+
+        <label for="description" data-trans>
+            A message to your parents:
+        </label>
+        <textarea
+            name="description"
+            data-trans="placeholder"
+            rows="3"
+
+            placeholder="I want this because..."
+            required="required"></textarea>
+
+        <hr/>
+
+        <label for="amount" data-trans>
+            It costs:
+        </label>
+        <div class="row">
+            ${currency.format.0}
+            <input
+                type="number"
+                name="amount"
+
+                placeholder="42"
+                required="required"
+                min="1"
+                max="4294967296"/>
+            ${currency.format.1}
+        </div>
+
+        <label for="url" data-trans>
+            A link (optional):
+        </label>
+        <input
+            type="url"
+            name="url"
+            data-trans="placeholder"
+
+            placeholder="https://example.com/my-wish" />
+
+        <div class="row buttons">
+            <input
+                class="cancel"
+                type="button"
+                id="cancel"
+                data-trans="value"
+
+                value="Cancel"
+                onclick="history.back()" />
+            <input
+                class="add"
+                type="submit"
+                id="submit"
+                data-trans="value"
+
+                value="Make wish" />
+        </div>
+    </form>
+</section>
