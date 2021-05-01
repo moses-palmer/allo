@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::api;
 use crate::db::values::{Role, UID};
 
+pub mod introspect;
 pub mod login;
 
 /// A log-in session.

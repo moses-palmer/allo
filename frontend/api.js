@@ -32,6 +32,33 @@ const module = {
 
     session: {
         /**
+         * Introspects the current session.
+         *
+         * If the request is successful, the state is updated.
+         *
+         * @param state
+         *     The application state.
+         * @return a future
+         */
+        introspect: (state) => module.get(
+            "session/introspect")
+            .then(async r => {
+                const me = r.user;
+                await state.update({
+                    me: {
+                        uid: me.uid,
+                        name: me.name,
+                        email: me.email,
+                        role: me.role,
+                    },
+                    family: {
+                        uid: me.family_uid,
+                    },
+                }).store();
+                return r;
+            }),
+
+        /**
          * Performs log in.
          *
          * If the request is successful, the state is updated.
