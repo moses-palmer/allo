@@ -5,6 +5,12 @@ use async_trait::async_trait;
 use futures::stream::BoxStream;
 use serde::{Deserialize, Serialize};
 
+pub mod dummy;
+
+pub use dummy as driver;
+
+pub use driver::{Configuration, Notifier};
+
 /// An error relating to notifications.
 #[derive(Debug)]
 pub enum Error {
