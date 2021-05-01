@@ -1,4 +1,5 @@
 import login from "./views/login.js";
+import register from "./views/register.js";
 
 /**
  * The views of the application.
@@ -7,6 +8,7 @@ import login from "./views/login.js";
  */
 const module = {
     "login": login,
+    "register": register,
 
     /**
      * Attempts to calculate the next view given an application state.
@@ -15,6 +17,11 @@ const module = {
      *     The current application state.
      */
     calculate: async (state) => {
+        // If we have no cached email address, we assume the user has not yet
+        // registered
+        if (state.me.email.length === 0) {
+            return "register";
+        }
     },
 };
 
