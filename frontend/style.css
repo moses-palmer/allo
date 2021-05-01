@@ -1,0 +1,495 @@
+:root {
+    --animation-tick: 0.5s;
+    --color-logo: #FFB8C0;
+    --color-shadow: #151012A0;
+    --color-error: #F0A0A0;
+    --font-size: 1.3rem;
+    --logo-source-height: 10vh;
+    --logo-source-width: 24vh;
+    --logo-stroke-width: 1.0;
+    --logo-target-height: 6vh;
+    --logo-target-viewbox-width: 14;
+    --logo-target-width: 6vh;
+    --margin-default: 0.5rem;
+    --menuitem-size: 6vh;
+    --radius-default: 0.2rem;
+}
+
+@media (prefers-color-scheme: light) {
+    :root {
+        --color-bg: #E0E0E0;
+        --color-button-add: #50A030;
+        --color-button-cancel: #FF8060;
+        --color-button-ok: #6080FF;
+        --color-button-remove: #C05030;
+        --color-disabled: gray;
+        --color-fg: #202020;
+        --color-messagebox-form: #F0F0F0;
+        --color-link: #4040A0;
+        --color-link-visited: #A040A0;
+        --color-logo-stroke: #202020;
+        --color-logo-ticker: #3030A0;
+        --color-pane: #D0D0D0;
+        --color-row-even: #F0F0F0;
+        --color-row-odd: #C8C8C8;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-bg: #202124;
+        --color-button-add: #50A030;
+        --color-button-cancel: #FF8060;
+        --color-button-ok: #6080FF;
+        --color-button-remove: #C05030;
+        --color-disabled: gray;
+        --color-fg: #E0E0E0;
+        --color-messagebox-form: #181818;
+        --color-link: #8080C0;
+        --color-link-visited: #C080c0;
+        --color-logo-stroke: #E0E0E0;
+        --color-logo-ticker: #3030A0;
+        --color-pane: #505050;
+        --color-row-even: #303030;
+        --color-row-odd: #181818;
+    }
+}
+
+@media (min-aspect-ratio: 3/2) {
+    :root {
+        --window-width: 40rem;
+    }
+}
+
+@media (max-aspect-ratio: 3/2) {
+    :root {
+        --window-width: 100%;
+    }
+}
+
+
+/**
+ * Handle user roles
+ */
+*.for-child {
+    display: none;
+}
+.role-child *.for-child {
+    display: inherit;
+}
+*.for-parent {
+    display: none;
+}
+.role-parent *.for-parent {
+    display: inherit;
+}
+
+
+/**
+ * Handle logged in state.
+ */
+*.login {
+    display: none;
+}
+.logged-in *.login {
+    display: inherit;
+}
+
+
+/**
+ * Define button rows.
+ */
+.row {
+    align-items: center;
+    display: flex;
+    justify-content: flex-start;
+    margin: 0;
+    width: 100%;
+}
+.row *, .row.buttons * {
+    margin-right: var(--margin-default);
+}
+.row *:last-child {
+    margin-right: 0;
+}
+.row.buttons {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: var(--margin-default);
+}
+.panel.buttons {
+    align-items: stretch;
+    display: flex;
+    flex-direction: row;
+    gap: var(--margin-default);
+    justify-content: flex-end;
+    margin-top: var(--margin-default);
+}
+.panel.buttons * {
+    flex: 1 1 auto;
+}
+section.app > .row {
+    padding-left: var(--margin-default);
+    padding-right: var(--margin-default);
+}
+
+
+* {
+    box-sizing: border-box;
+}
+
+
+html, body, article {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+
+body {
+    align-items: center;
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+    display: flex;
+    font-family: arial;
+    font-size: var(--font-size);
+    justify-content: center;
+    width: 100%;
+}
+
+body:after {
+    display: none;
+}
+
+
+a {
+    color: var(--color-link);
+    cursor: pointer;
+    display: inherit;
+    overflow: hidden;
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+a:visited {
+    color: var(--color-link-visited);
+}
+.row.buttons a {
+    font-size: calc(0.8 * var(--font-size));
+}
+
+
+article {
+    align-items: stretch;
+    display: flex;
+    flex-flow: column;
+    overflow: hidden;
+    width: var(--window-width);
+}
+
+
+/**
+ * Set margins for elements.
+ */
+section > *:first-child, form > *:first-child {
+    margin-top: 0;
+}
+section > *:last-child, form > *:last-child {
+    margin-bottom: 0;
+}
+section > *:not(:first-child) {
+    margin-top: calc(2 * var(--margin-default));
+}
+
+
+/**
+ * We use hr as separator, assuming that it will be the first element in
+ * templates.
+ */
+hr {
+    visibility: hidden;
+}
+
+h2 + hr {
+    display: none;
+}
+
+
+/**
+ * Headers.
+ */
+h1 {
+    font-size: calc(1.3 * var(--font-size));
+    margin-top: 0;
+    margin-bottom: var(--margin-default);
+}
+h2 {
+    font-size: calc(1.1 * var(--font-size));
+    margin-top: 0;
+    margin-bottom: var(--margin-default);
+}
+
+
+iframe {
+    border: 0.1rem;
+    height: 10rem;
+    margin-bottom: var(--margin-default);
+    margin-top: var(--margin-default);
+    width: 100%;
+}
+
+
+/**
+ * Forms and their elements.
+ */
+form {
+    background-color: var(--color-pane);
+    border: 0.1rem;
+    border-radius: var(--radius-default);
+    overflow: hidden;
+    margin-bottom: var(--margin-default);
+    padding: 0.5rem;
+    width: 100%;
+}
+form span:empty {
+    display: none;
+}
+fieldset {
+    appearance: none;
+    border-color: var(--color-bg);
+    border-radius: var(--radius-default);
+    border-style: solid;
+    margin: 0;
+    padding: var(--margin-default);
+}
+input {
+    appearance: none;
+}
+input, select, textarea {
+    border-width: 0.1rem;
+    border-style: solid;
+    border-radius: var(--radius-default);
+    display: block;
+    font-size: 1rem;
+    height: 2rem;
+    margin-bottom: 0.5em;
+    width: 100%;
+    font-family: arial;
+}
+input:disabled {
+    background-color: var(--color-disabled) !important;
+}
+input:invalid {
+    border-color: var(--color-error);
+}
+input[type = button], input[type = submit] {
+    background-color: var(--color-button-ok);
+    color: white;
+    font-size: var(--font-size);
+    justify-content: center;
+    margin: 0;
+    min-width: 5rem;
+    width: auto;
+}
+input[type = button].add, input[type = submit].add  {
+    background-color: var(--color-button-add);
+}
+input[type = button].cancel, input[type = submit].cancel  {
+    background-color: var(--color-button-cancel);
+}
+input[type = button].ok, input[type = submit].ok  {
+    background-color: var(--color-button-ok);
+}
+input[type = button].remove, input[type = submit].remove  {
+    background-color: var(--color-button-remove);
+}
+input[type = checkbox] {
+    appearance: auto;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin-bottom: 2px;
+    margin-left: 0;
+    margin-right: var(--margin-default);
+    margin-top: 2px;
+}
+input[type = radio] {
+    background-color: var(--color-pane);
+    border-color: var(--color-fg);
+    border-style: solid;
+    border-width: 2px;
+    border-radius: 50%;
+    height: 1.5rem;
+    margin-bottom: 2px;
+    margin-left: 0;
+    margin-right: var(--margin-default);
+    margin-top: 2px;
+    transition: background-color calc(0.2 * var(--animation-tick));
+    width: 1.5rem;
+}
+input[type = radio]:checked {
+    background-color: var(--color-button-ok);
+}
+select {
+    height: 2rem;
+}
+
+
+/**
+ * Tables.
+ */
+table {
+    background-color: var(--color-bg);
+    border: 0.1rem;
+    border-collapse: collapse;
+    padding: 0.5rem;
+    width: 100%;
+}
+
+caption {
+    background-color: var(--color-bg);
+    border: 0.1rem;
+    border-top-left-radius: var(--radius-default);
+    border-top-right-radius: var(--radius-default);
+    font-weight: bold;
+    height: 1.2em;
+    position: relative;
+    transition: height var(--animation-tick);
+}
+caption:after {
+    color: var(--color-link);
+    content: "⊕";
+    font-weight: lighter;
+    opacity: 0;
+    position: absolute;
+    right: var(--margin-default);
+    transition: opacity var(--animation-tick);
+}
+.collapsible.collapsed caption {
+    border-radius: var(--radius-default);
+}
+.collapsible:not(.empty) caption {
+    cursor: pointer;
+}
+.collapsed:not(.empty) caption:after {
+    opacity: 1;
+}
+
+thead, tbody, tfoot, td, th, tr div {
+    transition: max-height var(--animation-tick), opacity var(--animation-tick);
+}
+.collapsed thead, .collapsed tbody, .collapsed tfoot, .collapsed td,
+        .collapsed th {
+    height: 0;
+    opacity: 0;
+    padding: 0;
+    max-height: 0;
+    overflow: hidden;
+}
+.collapsed tr div {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+}
+tr div {
+    max-height: 2rem;
+    opacity: 1;
+}
+
+tbody, tfoot {
+    font-size: calc(0.8 * var(--font-size));
+    width: 100%;
+}
+th {
+    text-align: left;
+    font-size: calc(0.8 * var(--font-size));
+    font-style: italic;
+    font-weight: normal;
+}
+td.button div {
+    width: auto;
+}
+tr:nth-child(even) {
+    background-color: var(--color-row-even);
+}
+tr:nth-child(odd) {
+    background-color: var(--color-row-odd);
+}
+
+
+/**
+ * The main application section.
+ */
+section.app {
+    animation: var(--animation-tick) reveal forwards;
+    padding: calc(2.0 * var(--margin-default));
+    opacity: 0;
+}
+.ready section.app {
+    overflow: auto;
+}
+section.app section {
+    background-color: var(--color-pane);
+    border: 0.1rem;
+    border-radius: var(--radius-default);
+    overflow: hidden;
+    padding: 0.5rem;
+    width: 100%;
+}
+
+
+/**
+ * The message overlay
+ */
+#messages {
+    bottom: 0;
+    display: none;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+}
+#messages.active {
+    align-items: center;
+    animation: var(--animation-tick) reveal forwards;
+    background: radial-gradient(
+        circle at center, transparent, var(--color-shadow));
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity var(--animation-tick);
+}
+#messages.active.fading {
+    animation: var(--animation-tick) conceal forwards;
+    opacity: 1;
+}
+#messages .message-box {
+    background-color: var(--color-pane);
+    border-radius: var(--margin-default);
+    box-shadow: var(--margin-default)
+        var(--margin-default)
+        calc(2.0 * var(--margin-default))
+        var(--color-shadow);
+    margin: var(--margin-default);
+    padding: var(--margin-default);
+    width: calc(0.8 * var(--window-width));
+}
+#messages .message-box h1 {
+    font-size: var(--font-size);
+    font-weight: bold;
+}
+#messages .message-box form {
+    background-color: var(--color-messagebox-form);
+}
+
+@keyframes reveal {
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes conceal {
+    to {
+        opacity: 0;
+    }
+}
