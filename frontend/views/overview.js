@@ -62,6 +62,31 @@ export default {
             }
         };
 
+        const giftTemplate = doc.querySelector(".gift.template").content;
+        const gift = async (state, child) => {
+            const body = giftTemplate.cloneNode(true);
+            const [name, currencyPre, amount, currencyPost, description] =
+                ui.managed(body);
+            name.innerText = _("Gift for {}").format(child.name);
+            currencyPre.innerText = state.currency.format[0];
+            currencyPost.innerText = state.currency.format[1];
+            const r = await ui.show(
+                body,
+                [
+                    {name: "yes", text: _("Give gift")},
+                    {name: "no", text: _("Cancel"), classes: ["cancel"]},
+                ]);
+            switch (r) {
+            case "yes":
+                return {
+                    amount: parseInt(amount.value),
+                    description: description.value,
+                }
+            case "no":
+                return undefined;
+            }
+        };
+
         if (state.me.role === "child") {
             childTable(
                 "#my-transactions template",
@@ -87,7 +112,29 @@ export default {
                     user: child.name,
                     amount: ui.currency(
                         state, state.context.balances[child.uid]),
-                }));
+                }),
+                (child, table) => {
+                    const [_name, link] = ui.managed(table);
+                    link.innerText = _("Give {} a gift!")
+                        .format(child.name);
+                    link.addEventListener(
+                        "click",
+                        async () => {
+                            gift(state, child)
+                                .then((q) => {
+                                    if (q != undefined) {
+                                        return api.transaction.create(
+                                            state, child.uid, "gift", q.amount,
+                                            q.description);
+                                    }
+                                })
+                                .then((r) => {
+                                    if (r !== undefined) {
+                                        ui.update(state);
+                                    }
+                                });
+                        });
+                });
         }
     },
 };
