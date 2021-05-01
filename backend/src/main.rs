@@ -58,6 +58,7 @@ async fn run() -> io::Result<()> {
             .service(api::session::login::handle)
             .service(api::session::logout::handle)
             .service(api::transaction::create::handle)
+            .service(api::transaction::list::handle)
     })
     .bind(bind)
     .unwrap()

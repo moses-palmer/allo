@@ -50,6 +50,22 @@ const module = {
                 transaction_type: type,
                 amount,
                 description}),
+
+        /**
+         * Lists transactions for a user.
+         *
+         * @param state
+         *     The application state.
+         * @param user
+         *     The unique ID of the user involved in the transaction.
+         * @param offset
+         *     The offset from the last transaction from which to read.
+         * @param limit
+         *     The maximum number of transactions to return. The actual number
+         *     may be smaller.
+         */
+        list: (state, user, offset, limit) => module.get(
+            "transaction/{}?offset={}&limit={}".format(user, offset, limit)),
     },
 
     request: {
