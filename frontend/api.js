@@ -94,6 +94,22 @@ const module = {
                 }).store();
                 return r;
             }),
+
+        /**
+         * Performs log out.
+         *
+         * If the request is successful, the state is updated.
+         *
+         * @param state
+         *     The application state.
+         * @return a future
+         */
+        logout: (state) => module.post(
+            "session/logout")
+            .then(async r => {
+                await state.clear();
+                return r;
+            }),
     },
 
     family: {
