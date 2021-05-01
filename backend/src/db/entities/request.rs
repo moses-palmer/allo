@@ -29,6 +29,64 @@ entity!(
     }
 );
 
+impl Request {
+    /// The SQL statement used to load all requests from a user.
+    const READ_FOR_USER: &'static str = concat!(
+        "SELECT Requests.uid, user_uid, Requests.name, description, amount, \
+            url, time \
+        FROM Requests \
+        WHERE user_uid = ",
+        parameter!(user_uid),
+    );
+
+    /// The SQL statement used to load all requests from members of a family.
+    const READ_FOR_FAMILY: &'static str = concat!(
+        "SELECT Requests.uid, user_uid, Requests.name, description, amount, \
+            url, time \
+        FROM Requests \
+        LEFT JOIN Users \
+            ON Requests.user_uid = Users.uid \
+        WHERE Users.family_uid = ",
+        parameter!(user_uid),
+    );
+
+    /// Loads all requests for a user.
+    ///
+    /// # Arguments
+    /// *  `e` - The database executor.
+    /// *  `user_uid` - The user UID.
+    pub async fn read_for_user<'a, E>(
+        e: E,
+        user_uid: &UID,
+    ) -> Result<Vec<Self>, crate::db::Error>
+    where
+        E: ::sqlx::Executor<'a, Database = crate::db::Database>,
+    {
+        sqlx::query_as(Self::READ_FOR_USER)
+            .bind(user_uid)
+            .fetch_all(e)
+            .await
+    }
+
+    /// Loads all requests for a family.
+    ///
+    /// # Arguments
+    /// *  `e` - The database executor.
+    /// *  `family_uid` - The family UID.
+    pub async fn read_for_family<'a, E>(
+        e: E,
+        family_uid: &UID,
+    ) -> Result<Vec<Self>, crate::db::Error>
+    where
+        E: ::sqlx::Executor<'a, Database = crate::db::Database>,
+    {
+        sqlx::query_as(Self::READ_FOR_FAMILY)
+            .bind(family_uid)
+            .fetch_all(e)
+            .await
+    }
+}
+
 entity_tests! {
     Request[i64 = i64::default()] {
         entity: |id| Request {
@@ -51,5 +109,136 @@ entity_tests! {
             crate::db::entities::user::tests::prepare(c, &u).await?;
             u.create(c).await
         };
+    }
+}
+
+#[cfg(test)]
+mod impl_tests {
+    use actix_rt;
+
+    use crate::db::entities::create;
+    use crate::db::test_pool;
+    use crate::db::values::Role;
+
+    use super::*;
+
+    #[actix_rt::test]
+    async fn read_for_user() {
+        let pool = test_pool().await;
+        {
+            let mut c = pool.acquire().await.unwrap();
+
+            let family = create::family(&mut c, "Family");
+            let user1 = create::user(
+                &mut c,
+                Role::Parent,
+                "User 1",
+                "test1@example.com",
+                family.uid(),
+            );
+            let user2 = create::user(
+                &mut c,
+                Role::Parent,
+                "User 2",
+                "test2@example.com",
+                family.uid(),
+            );
+            let request1 = create::request(
+                &mut c,
+                user1.uid(),
+                "name1",
+                "description1",
+                42,
+                "https://example.com/",
+            );
+            let request2 = create::request(
+                &mut c,
+                user1.uid(),
+                "name2",
+                "description2",
+                43,
+                "https://example.com/",
+            );
+            create::request(
+                &mut c,
+                user2.uid(),
+                "name3",
+                "description3",
+                44,
+                "https://example.com/",
+            );
+
+            let requests = Request::read_for_user(&mut c, request1.user_uid())
+                .await
+                .unwrap();
+            assert_eq!(requests.len(), 2);
+            assert!(requests.contains(&request1));
+            assert!(requests.contains(&request2));
+        }
+    }
+
+    #[actix_rt::test]
+    async fn read_for_family() {
+        let pool = test_pool().await;
+        {
+            let mut c = pool.acquire().await.unwrap();
+
+            let family1 = create::family(&mut c, "Family 1");
+            let family2 = create::family(&mut c, "Family 2");
+            let user1 = create::user(
+                &mut c,
+                Role::Parent,
+                "User 1",
+                "test1@example.com",
+                family1.uid(),
+            );
+            let user2 = create::user(
+                &mut c,
+                Role::Parent,
+                "User 2",
+                "test2@example.com",
+                family2.uid(),
+            );
+            let request1 = create::request(
+                &mut c,
+                user1.uid(),
+                "name1",
+                "description1",
+                42,
+                "https://example.com/",
+            );
+            let request2 = create::request(
+                &mut c,
+                user1.uid(),
+                "name2",
+                "description2",
+                43,
+                "https://example.com/",
+            );
+            let request3 = create::request(
+                &mut c,
+                user1.uid(),
+                "name3",
+                "description3",
+                44,
+                "https://example.com/",
+            );
+            create::request(
+                &mut c,
+                user2.uid(),
+                "name4",
+                "description4",
+                44,
+                "https://example.com/",
+            );
+
+            let requests = Request::read_for_family(&mut c, family1.uid())
+                .await
+                .unwrap();
+            assert_eq!(requests.len(), 3);
+            assert!(requests.contains(&request1));
+            assert!(requests.contains(&request2));
+            assert!(requests.contains(&request3));
+        }
     }
 }

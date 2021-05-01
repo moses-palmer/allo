@@ -1,3 +1,7 @@
+use std::ops::Range;
+
+use sqlx::prelude::*;
+
 use crate::db::values::{Timestamp, TransactionType, UID};
 
 entity!(
@@ -26,6 +30,73 @@ entity!(
     }
 );
 
+impl Transaction {
+    /// The SQL statement used to load transactions for a user.
+    const READ_FOR_USER_LIMIT: &'static str =
+        concat!(
+        "SELECT uid, transaction_type, user_uid, description, amount, time \
+        FROM Transactions \
+        WHERE user_uid = ",
+        parameter!(family_uid), " ",
+        "ORDER BY time DESC \
+        LIMIT ", parameter!(row_count), " \
+        OFFSET ", parameter!(offset),
+
+    );
+
+    /// The SQL statement used to load the balace for a user.
+    const BALANCE: &'static str = concat!(
+        "SELECT SUM(amount) \
+        FROM Transactions \
+        WHERE user_uid = ",
+        parameter!(user_uid),
+    );
+
+    /// Loads transactions for a user.
+    ///
+    /// # Arguments
+    /// *  `e` - The database executor.
+    /// *  `user_uid` - The user UID.
+    /// *  `limit` - The maximum number of transactions to retrieve.
+    pub async fn read_for_user_limit<'a, E>(
+        e: E,
+        user_uid: &UID,
+        range: Range<usize>,
+    ) -> Result<Vec<Self>, crate::db::Error>
+    where
+        E: ::sqlx::Executor<'a, Database = crate::db::Database>,
+    {
+        Ok(sqlx::query_as(Self::READ_FOR_USER_LIMIT)
+            .bind(user_uid)
+            .bind((range.end - range.start) as u32)
+            .bind(range.start as u32)
+            .fetch_all(e)
+            .await?
+            .into_iter()
+            .rev()
+            .collect())
+    }
+
+    /// Loads the balance for a user.
+    ///
+    /// # Arguments
+    /// *  `e` - The database executor.
+    /// *  `user_uid` - The user UID.
+    pub async fn balance<'a, E>(
+        e: E,
+        user_uid: &UID,
+    ) -> Result<Option<i64>, crate::db::Error>
+    where
+        E: ::sqlx::Executor<'a, Database = crate::db::Database>,
+    {
+        Ok(sqlx::query(Self::BALANCE)
+            .bind(user_uid)
+            .fetch_optional(e)
+            .await?
+            .map(|r| r.get(0)))
+    }
+}
+
 entity_tests! {
     Transaction[i64 = i64::default()] {
         entity: |id| Transaction {
@@ -47,5 +118,141 @@ entity_tests! {
             crate::db::entities::user::tests::prepare(c, &u).await?;
             u.create(c).await
         };
+    }
+}
+
+#[cfg(test)]
+mod impl_tests {
+    use std::time::Duration;
+
+    use crate::db::entities::create;
+    use crate::db::test_pool;
+    use crate::db::values::Role;
+
+    use super::*;
+
+    #[actix_rt::test]
+    async fn read_for_user_limit() {
+        let pool = test_pool().await;
+        {
+            let mut c = pool.acquire().await.unwrap();
+
+            let family = create::family(&mut c, "Family");
+            let user1 = create::user(
+                &mut c,
+                Role::Parent,
+                "User 1",
+                "test1@example.com",
+                family.uid(),
+            );
+            let user2 = create::user(
+                &mut c,
+                Role::Parent,
+                "User 2",
+                "test2@example.com",
+                family.uid(),
+            );
+
+            let start = Timestamp::now();
+            let all_transactions = (0..40)
+                .map(|i| {
+                    create::transaction(
+                        &mut c,
+                        TransactionType::Gift,
+                        if i & 1 != 0 { user1.uid() } else { user2.uid() },
+                        &format!("description{}", i),
+                        (i + 1) * 3,
+                        start
+                            .0
+                            .checked_add_signed(
+                                chrono::Duration::from_std(
+                                    Duration::from_secs(i as u64),
+                                )
+                                .unwrap(),
+                            )
+                            .unwrap()
+                            .into(),
+                    )
+                })
+                .collect::<Vec<_>>();
+
+            let transactions =
+                Transaction::read_for_user_limit(&mut c, user1.uid(), 0..10)
+                    .await
+                    .unwrap();
+            assert_eq!(
+                transactions,
+                all_transactions
+                    .iter()
+                    .filter(|t| t.user_uid() == user1.uid())
+                    .skip(10)
+                    .cloned()
+                    .collect::<Vec<_>>(),
+            );
+            let transactions =
+                Transaction::read_for_user_limit(&mut c, user1.uid(), 1..10)
+                    .await
+                    .unwrap();
+            assert_eq!(
+                transactions,
+                all_transactions
+                    .iter()
+                    .filter(|t| t.user_uid() == user1.uid())
+                    .skip(10)
+                    .take(9)
+                    .cloned()
+                    .collect::<Vec<_>>(),
+            );
+        }
+    }
+
+    #[actix_rt::test]
+    async fn balance() {
+        let pool = test_pool().await;
+        {
+            let mut c = pool.acquire().await.unwrap();
+
+            let family = create::family(&mut c, "Family");
+            let user1 = create::user(
+                &mut c,
+                Role::Parent,
+                "User 1",
+                "test1@example.com",
+                family.uid(),
+            );
+            let user2 = create::user(
+                &mut c,
+                Role::Parent,
+                "User 2",
+                "test2@example.com",
+                family.uid(),
+            );
+
+            let start = Timestamp::now();
+            (0..40).for_each(|i| {
+                create::transaction(
+                    &mut c,
+                    TransactionType::Gift,
+                    if i & 1 != 0 { user1.uid() } else { user2.uid() },
+                    &format!("description{}", i),
+                    (i + 1) * 3,
+                    start
+                        .0
+                        .checked_add_signed(
+                            chrono::Duration::from_std(Duration::from_secs(
+                                i as u64,
+                            ))
+                            .unwrap(),
+                        )
+                        .unwrap()
+                        .into(),
+                );
+            });
+
+            assert_eq!(
+                Transaction::balance(&mut c, user1.uid()).await.unwrap(),
+                Some((0..40).filter(|i| i & 1 != 0).map(|i| (i + 1) * 3).sum()),
+            );
+        }
     }
 }
