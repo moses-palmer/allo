@@ -127,4 +127,14 @@ const load = async () => {
 };
 
 
-window.addEventListener("load", load);
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", async () => {
+        navigator.serviceWorker.register("./service.js", {
+            scope: api.BASE_URL,
+        });
+        await navigator.serviceWorker.ready;
+        await load();
+    });
+} else {
+    window.addEventListener("load", load);
+}
