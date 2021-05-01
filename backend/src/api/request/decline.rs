@@ -1,19 +1,24 @@
 use sqlx::prelude::*;
 
+use std::sync::Arc;
+
 use actix_session::Session;
 use actix_web::{delete, web, Responder};
 use serde::{Deserialize, Serialize};
 
 use crate::api;
+use crate::api::notify::{Event, Notify};
 use crate::api::session::State;
 use crate::db;
 use crate::db::entities::{Entity, Request, User};
 use crate::db::values::{Role, UID};
+use crate::notifications::Notifier;
 
 /// Deletes a user request
 #[delete("request/{user_uid}/{request_uid}")]
 pub async fn handle(
     pool: web::Data<db::Pool>,
+    notifier: web::Data<Arc<Notifier<Event>>>,
     session: Session,
     path: web::Path<(UID, i64)>,
 ) -> impl Responder {
@@ -22,7 +27,18 @@ pub async fn handle(
     let state = State::load(&session)?;
     let (user_uid, request_uid) = path.into_inner();
     {
-        let res = execute(&mut trans, state, &user_uid, &request_uid).await?;
+        let res =
+            execute(&mut trans, state.clone(), &user_uid, &request_uid).await?;
+        Notify::MemberAndParents {
+            event: Event::RequestDeclined {
+                request: res.request.clone(),
+                by: state.user_uid.clone(),
+            },
+            uid: user_uid,
+            family: state.family_uid,
+        }
+        .send(&mut *trans, &notifier, &state.user_uid)
+        .await;
         trans.commit().await?;
         api::ok(res)
     }

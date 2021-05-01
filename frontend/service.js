@@ -54,6 +54,24 @@ self.addEventListener("fetch", (event) => {
             .then((cache) => fetchNetwork(cache, event.request)
                 .catch(() => fetchCache(cache, event.request))));
     } else {
-        event.respondWith(fetch(event.request));
+        event.respondWith(fetch(event.request).then((res) => {
+            // If the response indicates success, ensure the web socket is
+            // active
+            if (res.ok && self.notificationSocket === undefined) {
+                self.notificationSocket = new WebSocket(event.request.url
+                    .replace(/^http/, "ws")
+                    .replace(/\/api\/.*$/, "/api/notify"));
+                self.notificationSocket.onmessage = async (message) => {
+                    const data = JSON.parse(message.data);
+                    const clients = await self.clients.matchAll();
+                    clients.forEach((c) => c.postMessage(data));
+                };
+                self.notificationSocket.onclose = () => {
+                    self.notificationSocket = undefined;
+                };
+            }
+
+            return res;
+        }));
     }
 });

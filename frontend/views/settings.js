@@ -1,5 +1,6 @@
 import api from "../api.js";
 import { translate as _ } from "../translation.js";
+import * as notifications from "../notifications.js";
 import * as ui from "../ui.js";
 
 
@@ -7,7 +8,22 @@ export default {
     initialize: async (_state) => {},
 
     show: async (state, doc) => {
-        const [logout] = ui.managed(doc);
+        const [form, enableNotifications, logout] = ui.managed(doc);
+
+        if (window.isSecureContext) {
+            enableNotifications.checked = notifications.isEnabled(state);
+            enableNotifications.addEventListener("change", () => {
+                if (enableNotifications.checked) {
+                    notifications.enable(state, (enabled) => {
+                        enableNotifications.checked = enabled;
+                    });
+                } else {
+                    enableNotifications.checked = notifications.disable(state);
+                }
+            });
+        } else {
+            form.style.display = "none";
+        }
 
         logout.addEventListener("click", async () => {
             const r =  await ui.message(

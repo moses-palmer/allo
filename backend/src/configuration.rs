@@ -10,6 +10,8 @@ use crate::db;
 use crate::db::entities::Currency;
 use crate::db::values::UID;
 pub use crate::db::Configuration as Database;
+use crate::notifications;
+pub use crate::notifications::Configuration as Notifier;
 
 use actix_session::CookieSession as SessionStorage;
 
@@ -26,6 +28,9 @@ pub struct Configuration {
 
     /// Database connection information.
     database: Database,
+
+    /// The configuration for the notifier.
+    notifier: Notifier,
 
     /// The default configuration to apply to families.
     defaults: FamilyConfiguration,
@@ -86,6 +91,17 @@ impl Configuration {
     /// Connects to the database connection pool.
     pub async fn connection_pool(&self) -> Result<db::Pool, db::Error> {
         db::Pool::connect_with(self.database.connect_options()?).await
+    }
+
+    /// Connects to the notifier.
+    pub async fn notifier<T>(
+        &self,
+    ) -> Result<impl notifications::Notifications, notifications::Error>
+    where
+        for<'a> T: Deserialize<'a>,
+        T: Clone + Send + Sync + Serialize + 'static,
+    {
+        notifications::Notifier::<T>::new(&self.notifier).await
     }
 
     /// A session generator.
