@@ -10,6 +10,7 @@ use crate::db;
 
 pub mod family;
 pub mod overview;
+pub mod request;
 pub mod server;
 pub mod session;
 

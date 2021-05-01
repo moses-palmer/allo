@@ -30,6 +30,31 @@ const module = {
      */
     ERROR_CLASS: "error",
 
+    request: {
+        /**
+         * Creates a request.
+         *
+         * @param state
+         *     The application state.
+         * @param name
+         *     A short name.
+         * @param description
+         *     A description of the request.
+         * @param amount
+         *     The cost of the item.
+         * @param url
+         *     An optional URL with more information.
+         * @return a future
+         */
+        make: (state, name, description, amount, url) => module.post(
+            "request/{}".format(state.me.uid), {
+                name,
+                description,
+                amount,
+                url: url ? url : undefined,
+            }),
+    },
+
     /**
      * Retrieves an account overview.
      *
