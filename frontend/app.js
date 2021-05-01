@@ -132,6 +132,13 @@ if ("serviceWorker" in navigator) {
         navigator.serviceWorker.register("./service.js", {
             scope: api.BASE_URL,
         });
+        navigator.serviceWorker.addEventListener("message", async (event) => {
+            const db = await connect();
+            const state = await State.load(
+                async () => await db.load(),
+                async (v) => db.store(v),
+                async () => db.clear());
+        });
         await navigator.serviceWorker.ready;
         await load();
     });

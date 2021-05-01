@@ -1,19 +1,24 @@
 use sqlx::prelude::*;
 
+use std::sync::Arc;
+
 use actix_session::Session;
 use actix_web::{put, web, Responder};
 use serde::{Deserialize, Serialize};
 
 use crate::api;
+use crate::api::notify::{Event, Notify};
 use crate::api::session::State;
 use crate::db;
 use crate::db::entities::{allowance, Allowance, Entity, User};
 use crate::db::values::{Role, UID};
+use crate::notifications::Notifier;
 
 /// Changes the allowance for a user.
 #[put("user/{user_uid}/allowance/{allowance_uid}")]
 pub async fn handle(
     pool: web::Data<db::Pool>,
+    notifier: web::Data<Arc<Notifier<Event>>>,
     session: Session,
     req: web::Json<Req>,
     path: web::Path<(UID, UID)>,
@@ -25,12 +30,22 @@ pub async fn handle(
     {
         let res = execute(
             &mut trans,
-            state,
+            state.clone(),
             &req.into_inner(),
             &user_uid,
             &allowance_uid,
         )
         .await?;
+        Notify::MemberAndParents {
+            event: Event::AllowanceUpdated {
+                allowance: res.allowance.clone(),
+                by: state.user_uid.clone(),
+            },
+            uid: user_uid,
+            family: state.family_uid,
+        }
+        .send(&mut *trans, &notifier, &state.user_uid)
+        .await;
         trans.commit().await?;
         api::ok(res)
     }

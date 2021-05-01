@@ -1,19 +1,24 @@
 use sqlx::prelude::*;
 
+use std::sync::Arc;
+
 use actix_session::Session;
 use actix_web::{post, web, Responder};
 use serde::{Deserialize, Serialize};
 
 use crate::api;
+use crate::api::notify::{Event, Notify};
 use crate::api::session::State;
 use crate::db;
 use crate::db::entities::{Entity, Password};
 use crate::db::values::PasswordHash;
+use crate::notifications::Notifier;
 
 /// Changes the password for a user.
 #[post("session/password")]
 pub async fn handle(
     pool: web::Data<db::Pool>,
+    notifier: web::Data<Arc<Notifier<Event>>>,
     session: Session,
     req: web::Json<Req>,
 ) -> impl Responder {
@@ -22,6 +27,12 @@ pub async fn handle(
     let state = State::load(&session)?;
     {
         let res = execute(&mut trans, state.clone(), &req.into_inner()).await?;
+        Notify::Member {
+            event: Event::Logout {},
+            user: state.user_uid.clone(),
+        }
+        .send(&mut *trans, &notifier, &state.user_uid)
+        .await;
         trans.commit().await?;
         super::State::clear(&session);
         api::ok(res)
