@@ -13,6 +13,7 @@ mod db;
 
 mod api;
 mod configuration;
+mod email;
 mod notifications;
 mod tasks;
 
@@ -38,20 +39,30 @@ async fn run() -> io::Result<()> {
             tasks::ScheduledTask::Daily(Box::new(tasks::allowance::Payer)),
         )
     });
+    let server_configuration = Arc::new(configuration.clone());
     let notifier = Arc::new(
         configuration
             .notifier::<api::notify::Event>()
             .await
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?,
     );
+    let email_sender = Arc::new(
+        configuration
+            .email_sender()
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?,
+    );
     HttpServer::new(move || {
         App::new()
+            // Grant access to the server configuration
+            .data(server_configuration.clone())
             // Grant access to the connection pool
             .data(connection_pool.clone())
             // Publish the default configuration
             .data(configuration.defaults())
             // Grant access to the notifier
             .data(notifier.clone())
+            // Grant access to the email sender
+            .data(email_sender.clone())
             // Persist session
             .wrap(configuration.session())
             // Register server information endpoint
