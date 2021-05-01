@@ -11,6 +11,7 @@ use env_logger;
 #[macro_use]
 mod db;
 
+mod api;
 mod configuration;
 mod tasks;
 
