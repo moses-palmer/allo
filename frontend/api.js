@@ -30,6 +30,28 @@ const module = {
      */
     ERROR_CLASS: "error",
 
+    transaction: {
+        /**
+         * Creates a new transaction.
+         *
+         * @param state
+         *     The application state.
+         * @param user
+         *     The unique ID of the user involved in the transaction.
+         * @param type
+         *     The transaction type.
+         * @param amount
+         *     The amount.
+         * @param description
+         *     A description of the transaction.
+         */
+        create: (state, user, type, amount, description) => module.post(
+            "transaction/{}".format(user), {
+                transaction_type: type,
+                amount,
+                description}),
+    },
+
     request: {
         /**
          * Declines a request.
