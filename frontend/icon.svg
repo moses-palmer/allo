@@ -1,0 +1,87 @@
+<svg
+        xmlns="http://www.w3.org/2000/svg"
+        xmlns:xlink="http://www.w3.org/1999/xlink"
+        version="1.1"
+        viewBox="-2 -2 14 14">
+    <style>
+        svg {
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        svg path.fg {
+            fill: none;
+            stroke: #FFB8C0;
+            stroke-width: 1.5;
+        }
+
+        svg path.fg.face {
+            fill: #FFB8C0;
+            stroke: none;
+        }
+
+        svg path.bg {
+            fill: none;
+            stroke: #202020;
+            stroke-width: 2.5;
+        }
+
+        svg path.bg.face {
+            fill: none;
+            stroke: #202020;
+            stroke-width: 1.0;
+        }
+    </style>
+    <g transform="translate(0.5, 0)">
+        <path
+            class="bg"
+            d="
+                M 0 9.5
+                l 0 -4.5
+                a 5 5 0 1 1 10 0
+                l 0 4.5
+                M 0 7
+                l 10 0" />
+        <path
+            class="bg face"
+            d="
+                M 4.13 0.08
+                A 5 5 0 0 0 2.89 0.47
+                L 3.05 -1.20
+                z
+                M 2.5 0.667
+                A 5 5 0 0 0 1.46 1.46
+                L 1.04 -0.16
+                z
+                M 0 6
+                l 0 -2
+                l -1.5 0
+                l 0 2
+                z" />
+        <path
+            class="fg"
+            d="
+                M 0 9.5
+                l 0 -4.5
+                a 5 5 0 1 1 10 0
+                l 0 4.5
+                M 0 7
+                l 10 0" />
+        <path
+            class="fg face"
+            d="
+                M 4.13 0.08
+                A 5 5 0 0 0 2.89 0.47
+                L 3.05 -1.20
+                z
+                M 2.5 0.667
+                A 5 5 0 0 0 1.46 1.46
+                L 1.04 -0.16
+                z
+                M 0 6
+                l 0 -2
+                l -1.5 0
+                l 0 2
+                z" />
+    </g>
+</svg>

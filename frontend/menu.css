@@ -1,0 +1,187 @@
+section.menu svg path.fg {
+    fill: none;
+    stroke: var(--color-logo);
+    stroke-width: calc(var(--logo-stroke-width) * 1.5);
+}
+section.menu svg path.fg.face {
+    fill: var(--color-logo);
+    stroke: none;
+}
+section.menu svg path.bg {
+    fill: none;
+    stroke: var(--color-logo-stroke);
+    stroke-width: calc(var(--logo-stroke-width) * 2.5);
+}
+section.menu svg path.bg.face {
+    fill: none;
+    stroke: var(--color-logo-stroke);
+    stroke-width: var(--logo-stroke-width);
+}
+section.menu svg path.ticker {
+    fill: var(--color-logo-ticker);
+}
+section.menu svg *.lines {
+    fill: none;
+    stroke: var(--color-logo-stroke);
+    stroke-width: var(--logo-stroke-width);
+}
+section.menu svg *.fill {
+    fill: var(--color-logo-stroke);
+    stroke: none;
+}
+
+
+/**
+ * The menu section.
+ */
+section.menu {
+    align-items: start;
+    display: flex;
+    flex-flow: column;
+    margin: 0;
+    min-height: var(--logo-target-height);
+    min-width: 0;
+    padding: var(--margin-default);
+    text-align: center;
+    transition: min-height var(--animation-tick),
+        min-width var(--animation-tick);
+    width: 100%;
+}
+.loading section.menu {
+    min-height: 100%;
+    min-width: 100%;
+}
+
+
+/**
+ * The padding used to vertically position the logotype when loading.
+ */
+section.padding {
+    min-height: 0;
+    width: 100%;
+    transition: min-height var(--animation-tick);
+}
+.loading section.padding {
+    min-height: calc(0.5 * (100vh - var(--logo-source-height)));
+}
+
+
+/**
+ * The padding used to horisontally position the logotype when loading.
+ */
+section.menu *.padding {
+    min-width: 0;
+    transition: min-width var(--animation-tick);
+}
+.loading section.menu *.padding {
+    min-width: calc(0.5 * (100% - var(--logo-source-width)));
+}
+
+
+section.menu hr {
+    display: block;
+    flex-grow: 100;
+    visibility: hidden;
+}
+
+
+/**
+ * The element containing the menu items.
+ */
+section.menu div.content {
+    display: flex;
+    flex-flow: row;
+    height: var(--logo-target-height);
+    justify-content: left;
+    max-height: 40vh;
+    width: 100%;
+    transition: height var(--animation-tick), width var(--animation-tick);
+}
+.loading section.menu div.content {
+    height: var(--logo-source-height);
+    width: 100%;
+}
+
+
+/**
+ * The menu items.
+ */
+section.menu .menuitem svg {
+    height: var(--menuitem-size);
+    opacity: 0;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    width: var(--menuitem-size);
+    transition: opacity var(--animation-tick);
+}
+.ready section.menu .menuitem svg {
+    opacity: 1;
+}
+
+
+/**
+ * The entire logotype.
+ */
+section.menu svg.logo {
+    display: block;
+    height: var(--logo-target-height);
+    opacity: 1;
+    width: auto;
+    transition: height var(--animation-tick);
+}
+.loading section.menu svg.logo {
+    height: var(--logo-source-height);
+}
+
+
+/**
+ * The part of the logotype that fades away after loading.
+ */
+section.menu svg.logo path {
+    height: 100%;
+    opacity: 0;
+    width: 100%;
+    transition: opacity var(--animation-tick);
+}
+.loading section.menu svg.logo path {
+    opacity: 1;
+}
+
+
+/**
+ * The icon remaining after the loading is complete.
+ */
+section.menu svg.logo path.icon {
+    animation: none;
+    opacity: 100%;
+}
+
+
+/**
+ * The ticker indicating that we are still loading.
+ */
+section.menu svg.logo path.ticker {
+    animation: none;
+    visibility: hidden;
+}
+.loading section.menu svg.logo path.ticker {
+    animation: calc(0.8 * var(--animation-tick)) ticker infinite ease-out;
+    visibility: visible;
+}
+@keyframes ticker {
+    0% {
+        transform: rotate(0deg);
+    }
+    25% {
+        transform: rotate(90deg);
+    }
+    50% {
+        transform: rotate(180deg);
+    }
+    75% {
+        transform: rotate(270deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
