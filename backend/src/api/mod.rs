@@ -10,6 +10,7 @@ use crate::db;
 
 pub mod family;
 pub mod overview;
+pub mod request;
 pub mod server;
 pub mod session;
 
@@ -36,6 +37,11 @@ impl Error {
     /// Generates an error indicating that the user is unauthorized.
     pub fn unauthorized() -> Self {
         Self::Static(StatusCode::UNAUTHORIZED, "unauthorized")
+    }
+
+    /// Generates an error indicating the requested resource does not exist.
+    pub fn not_found(reason: &'static str) -> Self {
+        Self::Static(StatusCode::NOT_FOUND, reason)
     }
 }
 
