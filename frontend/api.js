@@ -256,6 +256,25 @@ const module = {
                 await state.clear();
                 return r;
             }),
+
+        /**
+         * Changes the user password.
+         *
+         * If the request is successful, the state is updated.
+         *
+         * @param state
+         *     The application state.
+         * @return a future
+         */
+        password: (state, currentPassword, newPassword) => module.post(
+                "session/password", {
+                    current_password: currentPassword,
+                    new_password: newPassword,
+                })
+                .then(async r => {
+                    await state.clear();
+                    return r;
+                }),
     },
 
     family: {

@@ -8,6 +8,7 @@ use crate::db::values::{Role, UID};
 pub mod introspect;
 pub mod login;
 pub mod logout;
+pub mod password;
 
 /// A log-in session.
 #[derive(Clone, Debug, Deserialize, Serialize)]
