@@ -1,0 +1,45 @@
+<section class="app" id="login">
+    <h1 data-trans>
+        Log in
+    </h1>
+
+    <form id="form">
+        <label for="user-email" data-trans>
+            Your email address:
+        </label>
+        <input
+            type="email"
+            name="email"
+            data-trans="placeholder"
+
+            autocomplete="email"
+            placeholder="email@example.com"
+            required="required" />
+
+        <label for="user-password" data-trans>
+            Your password:
+        </label>
+        <input
+            type="password"
+            name="password"
+            data-trans="placeholder"
+
+            autocomplete="current-password"
+            placeholder="Password"
+            required="required" />
+
+        <div class="row buttons">
+            <input
+                type="submit"
+                id="submit"
+                data-trans="value"
+
+                value="Log in" />
+        </div>
+    </form>
+
+    <p>
+        <span data-trans>Don't you have an account?</span>
+        <a href="#register" data-trans>Create one!</a>
+    </p>
+</section>
