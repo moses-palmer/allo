@@ -18,6 +18,9 @@ pub use crate::email::Configuration as EMailTransport;
 use crate::notifications;
 pub use crate::notifications::Configuration as Notifier;
 
+#[cfg(feature = "session_redis")]
+use actix_redis::RedisSession as SessionStorage;
+#[cfg(not(any(feature = "session_redis")))]
 use actix_session::CookieSession as SessionStorage;
 
 /// The size, in bytes, of a key used to protect sessions.
@@ -53,6 +56,32 @@ pub struct Server {
     pub bind: String,
 }
 
+#[cfg(feature = "session_redis")]
+#[derive(Clone, Deserialize, Serialize)]
+pub struct Session {
+    /// The Redis host and optionally port number.
+    pub host: String,
+
+    /// The time-to-live for cookies, in seconds.
+    pub ttl: u32,
+
+    /// The project specific key.
+    ///
+    /// This must be a string of hexadecimal characters. The first 64
+    /// characters will be used to generate a key.
+    pub secret: Secret<SESSION_KEY_SIZE>,
+
+    /// Whether the cookie should be secure.
+    pub secure: bool,
+
+    /// The name of the cookie
+    pub name: String,
+
+    /// The prefix used to generate the Redis keys for sessions.
+    pub key_prefix: String,
+}
+
+#[cfg(not(any(feature = "session_redis")))]
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Session {
     /// The secret used to protect cookies.
@@ -218,6 +247,20 @@ impl<const SIZE: usize> Into<String> for Secret<SIZE> {
 
 impl Session {
     /// Generates the storage for this kind of session.
+    #[cfg(feature = "session_redis")]
+    pub fn storage(&self) -> SessionStorage {
+        let key_prefix = self.key_prefix.clone();
+        SessionStorage::new(&self.host, &self.secret.key)
+            .ttl(self.ttl)
+            .cache_keygen(Box::new(move |key| {
+                format!("{}.{}", key_prefix, key)
+            }))
+            .cookie_secure(self.secure)
+            .cookie_name(&self.name)
+    }
+
+    /// Generates the storage for this kind of session.
+    #[cfg(not(any(feature = "session_redis")))]
     pub fn storage(&self) -> SessionStorage {
         SessionStorage::signed(&self.secret.key)
             .secure(self.secure)
