@@ -12,6 +12,7 @@ use env_logger;
 mod db;
 
 mod configuration;
+mod tasks;
 
 async fn run() -> io::Result<()> {
     env_logger::builder().format_timestamp(None).init();
