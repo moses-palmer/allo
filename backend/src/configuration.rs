@@ -1,7 +1,9 @@
 use std::convert::{TryFrom, TryInto};
 use std::fs;
 use std::io;
+use std::path::PathBuf;
 
+use lettre::message::Mailbox;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use toml;
@@ -10,6 +12,9 @@ use crate::db;
 use crate::db::entities::Currency;
 use crate::db::values::UID;
 pub use crate::db::Configuration as Database;
+use crate::email;
+use crate::email::template::Language;
+pub use crate::email::Configuration as EMailTransport;
 use crate::notifications;
 pub use crate::notifications::Configuration as Notifier;
 
@@ -32,6 +37,9 @@ pub struct Configuration {
     /// The configuration for the notifier.
     notifier: Notifier,
 
+    /// The configuration for the email sender.
+    email: EMail,
+
     /// The default configuration to apply to families.
     defaults: FamilyConfiguration,
 }
@@ -52,6 +60,21 @@ struct Session {
 
     /// The name of the cookie
     name: String,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+struct EMail {
+    /// The file containing template definitions.
+    templates: PathBuf,
+
+    /// The default language to use when sending emails.
+    default_language: Language,
+
+    /// The name of the sender.
+    from: Mailbox,
+
+    /// The transport configuration.
+    transport: EMailTransport,
 }
 
 /// A key used internally to maintain secrets.
@@ -114,6 +137,23 @@ impl Configuration {
         T: Clone + Send + Sync + Serialize + 'static,
     {
         notifications::Notifier::<T>::new(&self.notifier).await
+    }
+
+    /// An email sender.
+    ///
+    /// This method will load the templates indicated in the configuration and
+    /// generate an email transport.
+    pub fn email_sender(
+        &self,
+    ) -> Result<
+        email::Sender<impl lettre::AsyncTransport>,
+        Box<dyn ::std::error::Error + Send + Sync>,
+    > {
+        Ok(email::Sender::new(
+            email::Templates::load(&self.email.templates)?,
+            self.email.from.clone(),
+            self.email.transport.transport()?,
+        ))
     }
 
     /// A session generator.

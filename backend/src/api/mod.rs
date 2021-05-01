@@ -6,6 +6,7 @@ use actix_web::http::StatusCode;
 use actix_web::ResponseError;
 
 use crate::db;
+use crate::email;
 use crate::notifications;
 
 pub mod family;
@@ -129,6 +130,13 @@ impl From<notifications::Error> for Error {
     fn from(source: notifications::Error) -> Self {
         log::error!("An unexpected notification error occurred: {}", source);
         Error::Static(StatusCode::NOT_FOUND, "no notifications")
+    }
+}
+
+impl From<email::Error<email::driver::Error>> for Error {
+    fn from(source: email::Error<email::driver::Error>) -> Self {
+        log::error!("An unexpected email error occurred: {}", source);
+        Error::Static(StatusCode::INTERNAL_SERVER_ERROR, "fail to send email")
     }
 }
 
