@@ -25,6 +25,10 @@ async fn run() -> io::Result<()> {
         .connection_pool()
         .await
         .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+    db::MIGRATOR
+        .run(&connection_pool)
+        .await
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
     HttpServer::new(move || {
         App::new()
             // Grant access to the connection pool
