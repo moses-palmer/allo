@@ -1,0 +1,40 @@
+[package]
+name = "allo"
+version = "0.1.0"
+authors = ["Moses Palmér <mosespalmer@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+actix = "0.11"
+actix-http = "3.0.0-beta.4"
+actix-rt = "2.1"
+actix-web = "4.0.0-beta.4"
+async-trait = "*"
+bcrypt = "0.9"
+chrono = "0.4"
+either = "1.6"
+email_address = "0.2"
+env_logger = "0.7"
+futures = "0.3"
+futures-util = "0.3"
+log = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.5"
+url = "2.2"
+uuid = { version = "0.8", features = ["v4"] }
+
+[dependencies.actix-session]
+git = "https://github.com/actix/actix-extras"
+
+[dependencies.libsqlite3-sys]
+version  ="*"
+optional = true
+features= ["bundled"]
+
+[dependencies.sqlx]
+version = "0.5"
+features = ["chrono", "migrate", "runtime-actix-rustls"]
+
+[features]
+default = ["db_sqlite"]
+db_sqlite = ["libsqlite3-sys", "sqlx/sqlite"]
