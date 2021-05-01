@@ -1,4 +1,5 @@
 import api from "./api.js";
+import add_member from "./views/add-member.js";
 import login from "./views/login.js";
 import make_request from "./views/make-request.js";
 import overview from "./views/overview.js";
@@ -11,6 +12,7 @@ import request from "./views/request.js";
  * The names correspond to classes added to the body for simplicity.
  */
 const module = {
+    "add-member": add_member,
     "login": login,
     "make-request": make_request,
     "overview": overview,

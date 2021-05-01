@@ -7,8 +7,14 @@ export default {
     initialize: async (state) => {
         return await api.overview(state)
             .then((r) => {
-                ui.applyState(state, true);
-                return r;
+                const children = (members) => members
+                    .filter((member) => member.role === "child");
+                if (children(Object.values(state.family.members))
+                        .length === 0) {
+                    throw "add-member";
+                } else {
+                    return r;
+                }
             })
     },
 
