@@ -488,6 +488,8 @@ pub mod currency;
 pub use self::currency::Currency;
 pub mod family;
 pub use self::family::Family;
+pub mod invitation;
+pub use self::invitation::Invitation;
 pub mod password;
 pub use self::password::Password;
 pub mod request;
@@ -522,6 +524,32 @@ pub mod create {
 
     pub fn family(c: &mut Connection, name: &str) -> Family {
         let result = Family::new(UID::new(), name.into());
+        block_on(result.create(c)).unwrap();
+        result
+    }
+
+    pub fn invitation(
+        c: &mut Connection,
+        role: Role,
+        name: &str,
+        email: &str,
+        family_uid: &UID,
+    ) -> Invitation {
+        let (allowance_amount, allowance_schedule) = if role == Role::Child {
+            (Some(42), Some("mon".parse().unwrap()))
+        } else {
+            (None, None)
+        };
+        let result = Invitation::new(
+            UID::new(),
+            role,
+            name.into(),
+            email.parse().unwrap(),
+            allowance_amount,
+            allowance_schedule,
+            Timestamp::now(),
+            family_uid.clone(),
+        );
         block_on(result.create(c)).unwrap();
         result
     }
