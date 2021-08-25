@@ -150,6 +150,7 @@ const module = {
         .then(async r => {
             const family = r.family;
             family.members = listToMap(r.members, "uid");
+            family.invitations = r.invitations;
             const me = family.members[state.me.uid];
             const balance = r.balances[state.me.uid];
             await state.update({
