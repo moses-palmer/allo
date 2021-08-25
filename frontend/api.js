@@ -373,6 +373,19 @@ const module = {
             }),
     },
 
+    invitation: {
+        /**
+         * Gets a specific invitation.
+         *
+         * @param state
+         *     The application state.
+         * @param invitation
+         *     The unique ID of the invitation.
+         */
+        get: (state, invitation) => module.get(
+            "invitation/{}".format(invitation)),
+    },
+
     user: {
         /**
          * Gets a specific user.

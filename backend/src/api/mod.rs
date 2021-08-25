@@ -11,6 +11,7 @@ use crate::email;
 use crate::notifications;
 
 pub mod family;
+pub mod invitation;
 pub mod notify;
 pub mod overview;
 pub mod request;
