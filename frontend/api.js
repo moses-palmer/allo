@@ -384,6 +384,35 @@ const module = {
          */
         get: (state, invitation) => module.get(
             "invitation/{}".format(invitation)),
+
+        /**
+         * Creates a new invitation.
+         *
+         * @param role
+         *     The user role.
+         * @param name
+         *     The user name.
+         * @param email
+         *     The user email address.
+         * @param allowance
+         *     The user allowance if the user is a child.
+         */
+        create: (state, role, name, email, allowance) => module.post(
+            "invitation", {
+                user: {
+                    role,
+                    name,
+                    email,
+                    allowance_amount: allowance?.amount,
+                    allowance_schedule: allowance?.schedule,
+                },
+                language: navigator.language,
+            })
+            .then(async r => {
+                state.family.invitations.push(r.invitation);
+                await state.store();
+                return r;
+            }),
     },
 
     user: {

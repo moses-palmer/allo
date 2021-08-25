@@ -72,6 +72,7 @@ async fn run() -> io::Result<()> {
             .service(api::family::add::handle)
             .service(api::family::register::handle)
             .service(api::family::remove::handle)
+            .service(api::invitation::create::handle)
             .service(api::invitation::get::handle)
             .service(api::overview::handle)
             .service(api::request::decline::handle)

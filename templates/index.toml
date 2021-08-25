@@ -1,0 +1,8 @@
+[en.invitation]
+subject = "Invitation to Allo"
+wrapping = "en.html"
+body = "en/invitation.md"
+
+[en.invitation.attachments.logo]
+content_type = "image/png"
+path = "logo.png"
