@@ -413,6 +413,32 @@ const module = {
                 await state.store();
                 return r;
             }),
+
+        /**
+         * Joins a family given an invitation
+         *
+         * @param state
+         *     The application state.
+         * @param invitation
+         *     The unique invitation UID.
+         * @param password
+         *     The user password.
+         * @return a future
+         */
+        accept: (state, invitation, password) => module.post(
+            "invitation/{}/accept".format(invitation), {
+                password,
+            })
+            .then(r => {
+                const user = r.user;
+                const members = listToMap([user], "uid");
+                state.update({
+                    family: {
+                        members,
+                    },
+                }).store();
+                return r;
+            }),
     },
 
     user: {
