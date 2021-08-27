@@ -6,6 +6,10 @@ use serde::{Deserialize, Serialize};
 pub async fn handle() -> Res {
     Res {
         version: env!("CARGO_PKG_VERSION").into(),
+        features: vec![
+            #[cfg(feature = "email_smtp")]
+            "email".into(),
+        ],
     }
 }
 
@@ -13,6 +17,9 @@ pub async fn handle() -> Res {
 pub struct Res {
     /// The server version.
     version: String,
+
+    /// The features enabled for this server.
+    features: Vec<String>,
 }
 
 impl Responder for Res {
