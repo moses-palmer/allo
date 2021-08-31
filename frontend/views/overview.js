@@ -11,7 +11,9 @@ export default {
                     .filter((member) => member.role === "child");
                 if ((children(Object.values(state.family.members)).length
                         + children(state.family.invitations).length) === 0) {
-                    throw "add-member";
+                    throw state.server?.features.includes("email")
+                        ? "invite"
+                        : "add-member";
                 } else {
                     return r;
                 }

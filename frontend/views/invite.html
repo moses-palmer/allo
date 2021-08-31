@@ -1,0 +1,117 @@
+<section class="app" id="invite">
+    <h1 data-trans>
+        Invite a family member
+    </h1>
+
+    <p data-trans>
+        This will invite a new member to your family. The person will not be
+        added to you family until they have received an invitation email and
+        selected a password.
+    </p>
+
+    <form id="form">
+        <label for="user-name" data-trans>
+            Name:
+        </label>
+        <input
+            type="text"
+            name="user-name"
+            data-trans="placeholder"
+
+            autocomplete="given-name"
+            placeholder="Name"
+            required="required" />
+
+        <label for="user-email" data-trans>
+            Email address:
+        </label>
+        <input
+            type="email"
+            name="user-email"
+            data-trans="placeholder"
+
+            autocomplete="email"
+            placeholder="email@example.com"
+            required="required" />
+
+        <hr/>
+
+        <fieldset>
+            <legend>Is this a parent or a child?</legend>
+
+            <div class="row">
+                <input
+                    onclick="document.getElementById('child-controls')
+                            .style.display = 'none'"
+                    id="user-role-parent"
+                    type="radio"
+                    name="user-role"
+                    value="parent" />
+                <label for="user-role-parent" data-trans>
+                    Parent
+                </label>
+            </div>
+            <div class="row">
+                <input
+                    onclick="document.getElementById('child-controls')
+                            .style.display = 'block'"
+                    id="user-role-child"
+                    type="radio"
+                    name="user-role"
+                    checked
+                    value="child" />
+                <label for="user-role-child" data-trans>
+                    Child
+                </label>
+            </div>
+
+            <div id="child-controls">
+                <hr/>
+
+                <label for="allowance-amount" data-trans>
+                    Weekly allowance:
+                </label>
+                <div class="row">
+                    <span>${currency.format.0}</span>
+                    <input
+                        type="number"
+                        name="allowance-amount"
+
+                        placeholder="10" />
+                    <span>${currency.format.1}</span>
+                </div>
+
+                <label for="allowance-schedule" data-trans>
+                    Pay allowance on:
+                </label>
+                <select name="allowance-schedule">
+                    <option value="mon" data-trans>Mondays</option>
+                    <option value="tue" data-trans>Tuesdays</option>
+                    <option value="web" data-trans>Wednesdays</option>
+                    <option value="thu" data-trans>Thursdays</option>
+                    <option value="fri" data-trans>Fridays</option>
+                    <option value="sat" data-trans>Saturdays</option>
+                    <option value="sun" data-trans>Sundays</option>
+                </select>
+            </div>
+        </fieldset>
+
+        <div class="row buttons">
+            <input
+                class="cancel"
+                type="button"
+                id="cancel"
+                data-trans="value"
+                onclick="history.back()"
+
+                value="Cancel" />
+            <input
+                class="add"
+                type="submit"
+                id="submit"
+                data-trans="value"
+
+                value="Invite family member" />
+        </div>
+    </form>
+</section>
