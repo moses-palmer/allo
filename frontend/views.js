@@ -3,6 +3,7 @@ import add_member from "./views/add-member.js";
 import change_password from "./views/change-password.js";
 import family from "./views/family.js";
 import invite from "./views/invite.js";
+import join from "./views/join.js";
 import login from "./views/login.js";
 import make_request from "./views/make-request.js";
 import overview from "./views/overview.js";
@@ -22,6 +23,7 @@ const module = {
     "change-password": change_password,
     "family": family,
     "invite": invite,
+    "join": join,
     "login": login,
     "make-request": make_request,
     "overview": overview,

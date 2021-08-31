@@ -1,0 +1,58 @@
+<section class="app" id="join">
+    <h1 data-trans>
+        Hello ${context.invitation.name}!
+    </h1>
+
+    <p data-trans class="managed invited">
+        You have been invited to join the ${context.family.name} family on Allo.
+    </p>
+
+    <p data-trans class="for-child">
+        Your parents use Allo to manage your weekly allowance, and you can use
+        it to request gifts.
+    </p>
+
+    <p data-trans class="for-parent">
+        Use Allo to manage your children's weekly allowance. Allo maintains
+        their balance, and your children can request withdrawals.
+    </p>
+
+    <p data-trans>
+        Please enter a password. Use this together with the email address
+        ${context.invitation.email} to log in to Allo.
+    </p>
+
+    <form id="form">
+        <label for="password" data-trans>
+            Password:
+        </label>
+        <input
+            type="password"
+            name="password"
+            data-trans="placeholder"
+
+            autocomplete="new-password"
+            minlength="6"
+            placeholder="Password"
+            required="required" />
+        <input
+            type="password"
+            data-trans="placeholder"
+
+            autocomplete="new-password"
+            placeholder="Confirm password"
+            required="required" />
+
+        <hr/>
+
+        <div class="row buttons">
+            <input
+                class="add"
+                type="submit"
+                id="submit"
+                data-trans="value"
+
+                value="Start using Allo!" />
+        </div>
+    </form>
+</section>
