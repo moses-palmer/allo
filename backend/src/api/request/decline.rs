@@ -45,15 +45,15 @@ pub async fn handle(
 }
 
 pub async fn execute<'a>(
-    trans: &mut db::Transaction<'a>,
+    e: &mut api::Executor<'a>,
     state: State,
     user_uid: &UID,
     request_uid: &i64,
 ) -> Result<Res, api::Error> {
-    let request = Request::read(&mut *trans, request_uid)
+    let request = Request::read(&mut *e, request_uid)
         .await?
         .ok_or_else(|| api::Error::not_found("unknown request"))?;
-    let user = User::read(&mut *trans, user_uid)
+    let user = User::read(&mut *e, user_uid)
         .await?
         .ok_or_else(|| api::Error::not_found("unknown request"))?;
     match state.role {
@@ -64,7 +64,7 @@ pub async fn execute<'a>(
     if request.user_uid() != user.uid() {
         Err(api::Error::not_found("unknown request"))
     } else {
-        request.delete(&mut *trans).await?;
+        request.delete(&mut *e).await?;
         Ok(Res { request })
     }
 }

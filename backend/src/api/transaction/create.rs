@@ -35,12 +35,12 @@ pub async fn handle(
 }
 
 pub async fn execute<'a>(
-    trans: &mut db::Transaction<'a>,
+    e: &mut api::Executor<'a>,
     state: State,
     req: &Req,
     user_uid: &UID,
 ) -> Result<Res, api::Error> {
-    let user = User::read(&mut *trans, user_uid)
+    let user = User::read(&mut *e, user_uid)
         .await?
         .ok_or_else(|| api::Error::not_found("unknown request"))?;
     state
@@ -48,7 +48,7 @@ pub async fn execute<'a>(
         .assert_family(user.family_uid())?;
 
     let transaction = Transaction::create_with_auto_uid(
-        &mut *trans,
+        &mut *e,
         api::argument(req.transaction_type)?,
         user_uid.clone(),
         api::argument(req.description.clone())?,

@@ -18,6 +18,9 @@ pub mod session;
 pub mod transaction;
 pub mod user;
 
+/// The database executor used by the API functions.
+pub type Executor<'a> = db::Transaction<'a>;
+
 /// A general grouping of errors returned by this API.
 #[derive(Debug, PartialEq)]
 pub enum Error {

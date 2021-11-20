@@ -49,7 +49,7 @@ pub async fn handle(
 }
 
 pub async fn execute<'a>(
-    trans: &mut db::Transaction<'a>,
+    e: &mut api::Executor<'a>,
     state: State,
     req: &Req,
     user_uid: &UID,
@@ -57,7 +57,7 @@ pub async fn execute<'a>(
     state.assert_user(&user_uid)?.assert_role(Role::Child)?;
 
     let request = Request::create_with_auto_uid(
-        &mut *trans,
+        &mut *e,
         user_uid.clone(),
         api::argument(req.name.clone())?,
         api::argument(req.description.clone())?,

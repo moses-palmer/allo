@@ -41,22 +41,20 @@ pub async fn handle(
 }
 
 pub async fn execute<'a>(
-    trans: &mut db::Transaction<'a>,
+    e: &mut api::Executor<'a>,
     defaults: FamilyConfiguration,
     state: State,
     family_uid: UID,
 ) -> Result<Res, api::Error> {
     let State { user_uid, role, .. } = state.assert_family(&family_uid)?;
-    let configuration = FamilyConfiguration::read(&mut *trans, &family_uid)
+    let configuration = FamilyConfiguration::read(&mut *e, &family_uid)
         .await?
         .unwrap_or(defaults);
-    let family = api::expect(Family::read(&mut *trans, &family_uid).await?)?;
-    let members = User::read_for_family(&mut *trans, &family_uid).await?;
+    let family = api::expect(Family::read(&mut *e, &family_uid).await?)?;
+    let members = User::read_for_family(&mut *e, &family_uid).await?;
     let requests = match role {
-        Role::Parent => {
-            Request::read_for_family(&mut *trans, &family_uid).await?
-        }
-        Role::Child => Request::read_for_user(&mut *trans, &user_uid).await?,
+        Role::Parent => Request::read_for_family(&mut *e, &family_uid).await?,
+        Role::Child => Request::read_for_user(&mut *e, &user_uid).await?,
     };
     let children = || {
         members.iter().filter(|user| match (role, user.role()) {
@@ -70,7 +68,7 @@ pub async fn execute<'a>(
         for child in children() {
             transactions.extend(
                 Transaction::read_for_user_limit(
-                    &mut *trans,
+                    &mut *e,
                     child.uid(),
                     0..TRANSACTION_LIMIT,
                 )
@@ -84,7 +82,7 @@ pub async fn execute<'a>(
         for child in children() {
             balances.insert(
                 child.uid().clone(),
-                Transaction::balance(&mut *trans, child.uid())
+                Transaction::balance(&mut *e, child.uid())
                     .await?
                     .unwrap_or(0),
             );

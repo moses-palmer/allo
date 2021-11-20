@@ -29,13 +29,13 @@ pub async fn handle(
 }
 
 pub async fn execute<'a>(
-    trans: &mut db::Transaction<'a>,
+    e: &mut api::Executor<'a>,
     state: State,
     user_uid: &UID,
 ) -> Result<Res, api::Error> {
-    let user = api::expect(User::read(&mut *trans, user_uid).await?)?;
+    let user = api::expect(User::read(&mut *e, user_uid).await?)?;
     state.assert_family(&user.family_uid())?;
-    let allowance = Allowance::read_for_user(&mut *trans, user.uid())
+    let allowance = Allowance::read_for_user(&mut *e, user.uid())
         .await?
         .into_iter()
         .next();

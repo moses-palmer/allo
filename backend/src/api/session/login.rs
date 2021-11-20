@@ -37,19 +37,17 @@ pub async fn handle(
 /// *  `user_uid` - The user unique identifier.
 /// *  `password` - The password to use.
 pub async fn execute<'a>(
-    trans: &mut db::Transaction<'a>,
+    e: &mut api::Executor<'a>,
     req: &Req,
 ) -> Result<Res, api::Error> {
     use UserIdentifier::*;
     let password_hash = match req.identifier {
-        Email { ref email } => {
-            Password::read_by_email(&mut *trans, email).await?
-        }
-        UID { ref uid } => Password::read(&mut *trans, uid).await?,
+        Email { ref email } => Password::read_by_email(&mut *e, email).await?,
+        UID { ref uid } => Password::read(&mut *e, uid).await?,
     }
     .ok_or_else(api::Error::unauthorized)?;
     if password_hash.hash().verify(&req.password).unwrap_or(false) {
-        let user = User::read(&mut *trans, password_hash.user_uid())
+        let user = User::read(&mut *e, password_hash.user_uid())
             .await?
             .ok_or_else(api::Error::unauthorized)?;
         Ok(Res { user })

@@ -40,12 +40,12 @@ pub async fn handle(
 }
 
 pub async fn execute<'a>(
-    trans: &mut db::Transaction<'a>,
+    e: &mut api::Executor<'a>,
     state: State,
     req: &Req,
 ) -> Result<Res, api::Error> {
     let password =
-        api::argument(Password::read(&mut *trans, &state.user_uid).await?)?;
+        api::argument(Password::read(&mut *e, &state.user_uid).await?)?;
     if password
         .hash()
         .verify(&req.current_password)
@@ -55,7 +55,7 @@ pub async fn execute<'a>(
             password.user_uid().clone(),
             api::argument(PasswordHash::from_password(&req.new_password))?,
         )
-        .update(&mut *trans)
+        .update(&mut *e)
         .await?;
         Ok(Res)
     } else {

@@ -29,12 +29,12 @@ pub async fn handle(
 }
 
 pub async fn execute<'a>(
-    trans: &mut db::Transaction<'a>,
+    e: &mut api::Executor<'a>,
     state: State,
     user_uid: &UID,
     request_uid: &i64,
 ) -> Result<Res, api::Error> {
-    let user = User::read(&mut *trans, &user_uid)
+    let user = User::read(&mut *e, &user_uid)
         .await?
         .ok_or_else(|| api::Error::forbidden("invalid user"))?;
     match state.role {
@@ -42,7 +42,7 @@ pub async fn execute<'a>(
         Role::Child => state.assert_user(user.uid())?,
     };
 
-    let request = api::expect(Request::read(&mut *trans, &request_uid).await?)?;
+    let request = api::expect(Request::read(&mut *e, &request_uid).await?)?;
     if request.user_uid() != user.uid() {
         Err(api::Error::not_found("request not found"))
     } else {

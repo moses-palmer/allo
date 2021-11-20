@@ -45,12 +45,12 @@ pub async fn handle(
 }
 
 pub async fn execute<'a>(
-    trans: &mut db::Transaction<'a>,
+    e: &mut api::Executor<'a>,
     state: State,
     family_uid: &UID,
     user_uid: &UID,
 ) -> Result<Res, api::Error> {
-    let user = User::read(&mut *trans, user_uid)
+    let user = User::read(&mut *e, user_uid)
         .await?
         .ok_or_else(|| api::Error::not_found("unknown user"))?;
     let state = state
@@ -60,7 +60,7 @@ pub async fn execute<'a>(
     if &state.user_uid == user.uid() {
         Err(api::Error::forbidden("cannot remove self"))
     } else {
-        user.delete(&mut *trans).await?;
+        user.delete(&mut *e).await?;
         Ok(Res { user })
     }
 }

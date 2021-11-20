@@ -49,7 +49,7 @@ pub async fn handle(
 }
 
 pub async fn execute<'a>(
-    trans: &mut db::Transaction<'a>,
+    e: &mut api::Executor<'a>,
     state: State,
     req: &Req,
     family_uid: &UID,
@@ -72,7 +72,7 @@ pub async fn execute<'a>(
             "a parent cannot have an allowance",
         ));
     }
-    if User::read_for_family(&mut *trans, &family_uid)
+    if User::read_for_family(&mut *e, &family_uid)
         .await?
         .iter()
         .any(|u| u.name() == user.name())
@@ -87,8 +87,8 @@ pub async fn execute<'a>(
         api::argument(PasswordHash::from_password(&req.password))?,
     );
 
-    user.create(&mut *trans).await?;
-    password.create(&mut *trans).await?;
+    user.create(&mut *e).await?;
+    password.create(&mut *e).await?;
     if let Some(allowance) = req.allowance.clone() {
         api::argument(
             allowance
@@ -98,7 +98,7 @@ pub async fn execute<'a>(
                 })
                 .entity(UID::new()),
         )?
-        .create(&mut *trans)
+        .create(&mut *e)
         .await?;
     }
 

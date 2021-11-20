@@ -37,12 +37,12 @@ pub async fn handle(
 }
 
 pub async fn execute<'a>(
-    trans: &mut db::Transaction<'a>,
+    e: &mut api::Executor<'a>,
     state: State,
     query: &Query,
     user_uid: &UID,
 ) -> Result<Res, api::Error> {
-    let user = User::read(&mut *trans, &user_uid)
+    let user = User::read(&mut *e, &user_uid)
         .await?
         .ok_or_else(|| api::Error::forbidden("invalid user"))?;
     match state.role {
@@ -51,7 +51,7 @@ pub async fn execute<'a>(
     };
 
     let transactions = Transaction::read_for_user_limit(
-        &mut *trans,
+        &mut *e,
         &user_uid,
         query.clone().into(),
     )

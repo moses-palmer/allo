@@ -52,24 +52,25 @@ pub async fn handle(
 }
 
 pub async fn execute<'a>(
-    trans: &mut db::Transaction<'a>,
+    e: &mut api::Executor<'a>,
     state: State,
     req: &Req,
     user_uid: &UID,
     allowance_uid: &UID,
 ) -> Result<Res, api::Error> {
-    let user = api::expect(User::read(&mut *trans, user_uid).await?)?;
+    let user = api::expect(User::read(&mut *e, user_uid).await?)?;
     state
         .assert_family(&user.family_uid())?
         .assert_role(Role::Parent)?;
 
-    let allowance =
-        api::expect(Allowance::read(&mut *trans, &allowance_uid).await?)?
-            .merge(req.clone().merge(allowance::Description {
-                user_uid: Some(user.uid().clone()),
-                ..Default::default()
-            }));
-    allowance.update(&mut *trans).await?;
+    let allowance = api::expect(
+        Allowance::read(&mut *e, &allowance_uid).await?,
+    )?
+    .merge(req.clone().merge(allowance::Description {
+        user_uid: Some(user.uid().clone()),
+        ..Default::default()
+    }));
+    allowance.update(&mut *e).await?;
 
     Ok(Res { allowance })
 }

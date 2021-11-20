@@ -52,16 +52,16 @@ pub async fn handle(
 }
 
 pub async fn execute<'a>(
-    trans: &mut db::Transaction<'a>,
+    e: &mut api::Executor<'a>,
     state: State,
     req: &Req,
     user_uid: &UID,
     request_uid: &i64,
 ) -> Result<Res, api::Error> {
-    let request = Request::read(&mut *trans, request_uid)
+    let request = Request::read(&mut *e, request_uid)
         .await?
         .ok_or_else(|| api::Error::not_found("unknown request"))?;
-    let user = User::read(&mut *trans, user_uid)
+    let user = User::read(&mut *e, user_uid)
         .await?
         .ok_or_else(|| api::Error::not_found("unknown request"))?;
     state
@@ -72,7 +72,7 @@ pub async fn execute<'a>(
         Err(api::Error::not_found("unknown request"))
     } else {
         let transaction = Transaction::create_with_auto_uid(
-            &mut *trans,
+            &mut *e,
             TransactionType::Request,
             user.uid().clone(),
             request.name().clone(),
@@ -80,7 +80,7 @@ pub async fn execute<'a>(
             Timestamp::now(),
         )
         .await?;
-        request.delete(&mut *trans).await?;
+        request.delete(&mut *e).await?;
         Ok(Res {
             request,
             transaction,

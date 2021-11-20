@@ -27,7 +27,7 @@ pub async fn handle(
 }
 
 pub async fn execute<'a>(
-    trans: &mut db::Transaction<'a>,
+    e: &mut api::Executor<'a>,
     req: &Req,
 ) -> Result<Res, api::Error> {
     let family = api::argument(req.family.clone().entity(UID::new()))?;
@@ -46,9 +46,9 @@ pub async fn execute<'a>(
         api::argument(PasswordHash::from_password(&req.password))?,
     );
 
-    family.create(&mut *trans).await?;
-    user.create(&mut *trans).await?;
-    password.create(&mut *trans).await?;
+    family.create(&mut *e).await?;
+    user.create(&mut *e).await?;
+    password.create(&mut *e).await?;
 
     Ok(Res { family, user })
 }
