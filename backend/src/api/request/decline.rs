@@ -53,9 +53,7 @@ pub async fn execute<'a>(
     let request = Request::read(&mut *e, request_uid)
         .await?
         .ok_or_else(|| api::Error::not_found("unknown request"))?;
-    let user = User::read(&mut *e, user_uid)
-        .await?
-        .ok_or_else(|| api::Error::not_found("unknown request"))?;
+    let user = state.member(&mut *e, user_uid).await?;
     match state.role {
         Role::Parent => state.assert_family(user.family_uid())?,
         Role::Child => state.assert_user(user.uid())?,
