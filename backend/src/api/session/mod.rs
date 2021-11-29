@@ -1,9 +1,12 @@
 use actix_session::Session;
 use actix_web::http::StatusCode;
 use serde::{Deserialize, Serialize};
+use sqlx::Executor;
 
 use crate::api;
+use crate::db::entities::{Entity, User};
 use crate::db::values::{Role, UID};
+use crate::db::Database;
 
 pub mod introspect;
 pub mod login;
@@ -96,5 +99,23 @@ impl State {
         } else {
             Err(api::Error::forbidden("invalid role"))
         }
+    }
+
+    /// Reads a family member from the database.
+    ///
+    /// # Arguments
+    /// *  `user_uid` - The unique ID of the other user.
+    pub async fn member<'a, E>(
+        &self,
+        e: E,
+        user_uid: &UID,
+    ) -> Result<User, api::Error>
+    where
+        E: Executor<'a, Database = Database>,
+    {
+        User::read(e, user_uid)
+            .await?
+            .filter(|user| user.family_uid() == &self.family_uid)
+            .ok_or_else(|| api::Error::not_found("unknown user"))
     }
 }
