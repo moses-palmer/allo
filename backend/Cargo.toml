@@ -50,7 +50,7 @@ default-features = false
 version = "0.9"
 
 [dependencies.redis]
-version = "0.20.1"
+version = "0.22"
 optional = true
 features = ["aio", "tokio-comp"]
 

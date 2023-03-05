@@ -399,7 +399,7 @@ dependencies = [
  "libsqlite3-sys",
  "log",
  "pulldown-cmark",
- "redis 0.20.2",
+ "redis 0.22.3",
  "resvg",
  "serde",
  "serde_cbor",
@@ -1965,21 +1965,21 @@ dependencies = [
 
 [[package]]
 name = "redis"
-version = "0.20.2"
+version = "0.22.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4f0ceb2ec0dd769483ecd283f6615aa83dcd0be556d5294c6e659caefe7cc54"
+checksum = "aa8455fa3621f6b41c514946de66ea0531f57ca017b2e6c7cc368035ea5b46df"
 dependencies = [
  "async-trait",
  "bytes",
  "combine",
- "dtoa",
  "futures-util",
- "itoa 0.4.8",
+ "itoa 1.0.1",
  "percent-encoding",
  "pin-project-lite",
- "sha1",
+ "ryu",
+ "sha1_smol",
  "tokio",
- "tokio-util 0.6.9",
+ "tokio-util 0.7.0",
  "url",
 ]
 
