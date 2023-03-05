@@ -29,7 +29,7 @@ impl fmt::Display for UID {
         write!(
             f,
             "{}",
-            self.0.to_simple().encode_lower(&mut Uuid::encode_buffer())
+            self.0.simple().encode_lower(&mut Uuid::encode_buffer())
         )
     }
 }
