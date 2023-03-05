@@ -5,9 +5,9 @@ authors = ["Moses Palmér <mosespalmer@gmail.com>"]
 edition = "2021"
 
 [build-dependencies]
-resvg = "0.18"
-tiny-skia = "0.6"
-usvg = "0.18"
+resvg = "0.29"
+tiny-skia = "0.8"
+usvg = "0.29"
 
 [dependencies]
 actix = "0.12"

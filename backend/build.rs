@@ -1,7 +1,7 @@
 use std::fs::read_to_string;
 use std::path::{Path, PathBuf};
 
-use tiny_skia::Pixmap;
+use tiny_skia::{Pixmap, Transform};
 use usvg::{FitTo, Options, Tree};
 
 /// The errors that can occur when converting images.
@@ -45,10 +45,8 @@ where
         target.as_ref().to_str().unwrap()
     );
 
-    let tree =
-        Tree::from_str(&read_to_string(source)?, &Options::default().to_ref())?;
+    let svg = Tree::from_str(&read_to_string(source)?, &Options::default())?;
     let size = size.unwrap_or_else(|| {
-        let svg = tree.svg_node();
         (
             svg.size.width().ceil() as u32,
             svg.size.height().ceil() as u32,
@@ -58,8 +56,13 @@ where
     let mut pixmap = Pixmap::new(size.0, size.1).ok_or_else(|| {
         format!("invalid dimensions: {} × {}", size.0, size.1)
     })?;
-    resvg::render(&tree, FitTo::Size(size.0, size.1), pixmap.as_mut())
-        .ok_or_else(|| usvg::Error::InvalidSize)?;
+    resvg::render(
+        &svg,
+        FitTo::Size(size.0, size.1),
+        Transform::default(),
+        pixmap.as_mut(),
+    )
+    .ok_or_else(|| usvg::Error::InvalidSize)?;
     pixmap.save_png(target)?;
 
     Ok(())
