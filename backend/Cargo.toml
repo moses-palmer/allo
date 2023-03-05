@@ -37,7 +37,7 @@ optional = true
 
 [dependencies.lettre]
 default-features = false
-version = "0.10.0-rc.4"
+version = "0.10"
 features = ["builder", "serde", "tokio1", "tokio1-native-tls"]
 
 [dependencies.libsqlite3-sys]
@@ -47,7 +47,7 @@ features= ["bundled"]
 
 [dependencies.pulldown-cmark]
 default-features = false
-version = "0.8"
+version = "0.9"
 
 [dependencies.redis]
 version = "0.20.1"
