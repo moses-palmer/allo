@@ -63,7 +63,7 @@ version = "1.0"
 optional = true
 
 [dependencies.sqlx]
-version = "0.5"
+version = "0.6"
 features = ["chrono", "migrate", "runtime-actix-rustls"]
 
 [features]
