@@ -3,6 +3,9 @@ use std::fs;
 use std::io;
 use std::path::PathBuf;
 
+use actix_session::config::PersistentSession;
+use actix_session::SessionMiddleware;
+use actix_web::cookie::Key;
 use lettre::message::Mailbox;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
@@ -18,13 +21,13 @@ pub use crate::email::Configuration as EMailTransport;
 use crate::notifications;
 pub use crate::notifications::Configuration as Notifier;
 
+#[cfg(feature = "session_cookie")]
+use actix_session::storage::CookieSessionStore as SessionStorage;
 #[cfg(feature = "session_redis")]
-use actix_redis::RedisSession as SessionStorage;
-#[cfg(not(any(feature = "session_redis")))]
-use actix_session::CookieSession as SessionStorage;
+use actix_session::storage::RedisActorSessionStore as SessionStorage;
 
 /// The size, in bytes, of a key used to protect sessions.
-const SESSION_KEY_SIZE: usize = 32;
+const SESSION_KEY_SIZE: usize = 32 + 32;
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Configuration {
@@ -81,7 +84,7 @@ pub struct Session {
     pub key_prefix: String,
 }
 
-#[cfg(not(any(feature = "session_redis")))]
+#[cfg(feature = "session_cookie")]
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Session {
     /// The secret used to protect cookies.
@@ -177,8 +180,15 @@ impl Configuration {
     }
 
     /// A session generator.
-    pub fn session(&self) -> SessionStorage {
-        self.session.storage()
+    pub fn session(&self) -> SessionMiddleware<SessionStorage> {
+        SessionMiddleware::builder(
+            self.session.storage(),
+            Key::from(&self.session.secret.key),
+        )
+        .cookie_name(self.session.name.clone())
+        .cookie_secure(self.session.secure)
+        .session_lifecycle(PersistentSession::default())
+        .build()
     }
 
     /// The default configuration.
@@ -250,21 +260,15 @@ impl Session {
     #[cfg(feature = "session_redis")]
     pub fn storage(&self) -> SessionStorage {
         let key_prefix = self.key_prefix.clone();
-        SessionStorage::new(&self.host, &self.secret.key)
-            .ttl(self.ttl)
-            .cache_keygen(Box::new(move |key| {
-                format!("{}.{}", key_prefix, key)
-            }))
-            .cookie_secure(self.secure)
-            .cookie_name(&self.name)
+        SessionStorage::builder(&self.host)
+            .cache_keygen(move |key| format!("{}.{}", key_prefix, key))
+            .build()
     }
 
     /// Generates the storage for this kind of session.
-    #[cfg(not(any(feature = "session_redis")))]
+    #[cfg(feature = "session_cookie")]
     pub fn storage(&self) -> SessionStorage {
-        SessionStorage::signed(&self.secret.key)
-            .secure(self.secure)
-            .name(&self.name)
+        SessionStorage::default()
     }
 }
 
