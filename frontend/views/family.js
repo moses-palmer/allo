@@ -26,6 +26,13 @@ export default {
                     mapper(state, t, rowTemplate)));
         };
 
+        doc.querySelector("#add-member").addEventListener(
+            "click",
+            () => location.href = state.server?.features.includes("email")
+                ? "#invite"
+                : "#add-member"
+        );
+
         table(
             "#parents template",
             Object.values(state.family.members)

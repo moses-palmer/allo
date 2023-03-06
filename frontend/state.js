@@ -165,6 +165,7 @@ const TEMPLATE = {
     },
     family: {
         members: {},
+        invitations: [],
         name: "",
         uid: "",
     },

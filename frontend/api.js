@@ -150,6 +150,7 @@ const module = {
         .then(async r => {
             const family = r.family;
             family.members = listToMap(r.members, "uid");
+            family.invitations = r.invitations;
             const me = family.members[state.me.uid];
             const balance = r.balances[state.me.uid];
             await state.update({
@@ -369,6 +370,74 @@ const module = {
             .then(async r => {
                 delete state.family.members[user];
                 await state.store();
+                return r;
+            }),
+    },
+
+    invitation: {
+        /**
+         * Gets a specific invitation.
+         *
+         * @param state
+         *     The application state.
+         * @param invitation
+         *     The unique ID of the invitation.
+         */
+        get: (state, invitation) => module.get(
+            "invitation/{}".format(invitation)),
+
+        /**
+         * Creates a new invitation.
+         *
+         * @param role
+         *     The user role.
+         * @param name
+         *     The user name.
+         * @param email
+         *     The user email address.
+         * @param allowance
+         *     The user allowance if the user is a child.
+         */
+        create: (state, role, name, email, allowance) => module.post(
+            "invitation", {
+                user: {
+                    role,
+                    name,
+                    email,
+                    allowance_amount: allowance?.amount,
+                    allowance_schedule: allowance?.schedule,
+                },
+                language: navigator.language,
+            })
+            .then(async r => {
+                state.family.invitations.push(r.invitation);
+                await state.store();
+                return r;
+            }),
+
+        /**
+         * Joins a family given an invitation
+         *
+         * @param state
+         *     The application state.
+         * @param invitation
+         *     The unique invitation UID.
+         * @param password
+         *     The user password.
+         * @return a future
+         */
+        accept: (state, invitation, password) => module.post(
+            "invitation/{}/accept".format(invitation), {
+                password,
+            })
+            .then(r => {
+                const user = r.user;
+                const members = listToMap([user], "uid");
+                state.update({
+                    family: {
+                        members,
+                    },
+                }).store();
                 return r;
             }),
     },

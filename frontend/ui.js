@@ -550,6 +550,15 @@ export const notification = {
                                 e.allowance.user_uid].name,
                         }),
             };
+        case "FamilyMemberInvited":
+            return {
+                action: () => {},
+                title: _("Family member invited"),
+                body: _("A new member was invited to your family: {user}!")
+                    .format({
+                        user: e.user.name,
+                    }),
+            };
         case "FamilyMemberAdded":
             return {
                 action: () => location.hash = "#user"

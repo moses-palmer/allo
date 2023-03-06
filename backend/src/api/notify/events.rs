@@ -2,6 +2,7 @@ use actix::prelude::*;
 
 use serde::{Deserialize, Serialize};
 
+use crate::db::entities::user;
 use crate::db::entities::{Allowance, Request, User};
 use crate::db::values::UID;
 
@@ -22,6 +23,15 @@ pub enum Event {
         allowance: Allowance,
 
         /// The unique ID of the parent that updated the allowance.
+        by: UID,
+    },
+
+    /// A family member was added.
+    FamilyMemberInvited {
+        /// The user that was added.
+        user: user::Description,
+
+        /// The unique ID of the parent that added the family member.
         by: UID,
     },
 

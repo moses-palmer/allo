@@ -9,9 +9,11 @@ export default {
             .then((r) => {
                 const children = (members) => members
                     .filter((member) => member.role === "child");
-                if (children(Object.values(state.family.members))
-                        .length === 0) {
-                    throw "add-member";
+                if ((children(Object.values(state.family.members)).length
+                        + children(state.family.invitations).length) === 0) {
+                    throw state.server?.features.includes("email")
+                        ? "invite"
+                        : "add-member";
                 } else {
                     return r;
                 }
@@ -59,6 +61,21 @@ export default {
 
             if (tableTarget.querySelectorAll("table").length === 0) {
                 tableTarget.remove();
+            }
+        };
+
+        const invitationsTable = (selector, invitations) => {
+            const [invitationRowTemplate, tableTarget] = ui.extractElement(
+                doc, selector);
+            invitations.forEach((i) => {
+                const el = invitationRowTemplate.content.cloneNode(true);
+                const [name, email] = ui.managed(el);
+                name.innerText = i.name;
+                email.innerText = i.email;
+                tableTarget.appendChild(el);
+            });
+            if (state.family.invitations.length === 0) {
+                ui.removeParent(tableTarget, "SECTION");
             }
         };
 
@@ -141,6 +158,9 @@ export default {
                                 });
                         });
                 });
+            invitationsTable(
+                "#family-invitations-row",
+               state.family.invitations);
         }
     },
 };

@@ -10,7 +10,9 @@ use crate::api;
 use crate::api::session::State;
 use crate::configuration::FamilyConfiguration;
 use crate::db;
-use crate::db::entities::{Entity, Family, Request, Transaction, User};
+use crate::db::entities::{
+    Entity, Family, Invitation, Request, Transaction, User,
+};
 use crate::db::values::{Role, UID};
 
 /// The maximum number of transactions to return per user.
@@ -52,6 +54,7 @@ pub async fn execute<'a>(
         .unwrap_or(defaults);
     let family = api::expect(Family::read(&mut *e, &family_uid).await?)?;
     let members = User::read_for_family(&mut *e, &family_uid).await?;
+    let invitations = Invitation::read_for_family(&mut *e, &family_uid).await?;
     let requests = match role {
         Role::Parent => Request::read_for_family(&mut *e, &family_uid).await?,
         Role::Child => Request::read_for_user(&mut *e, &user_uid).await?,
@@ -94,6 +97,7 @@ pub async fn execute<'a>(
         currency: configuration.currency().clone(),
         family,
         members,
+        invitations,
         requests,
         transactions,
         balances,
@@ -110,6 +114,9 @@ pub struct Res {
 
     /// All members of this family.
     members: Vec<User>,
+
+    /// All pending invitations for this family.
+    invitations: Vec<Invitation>,
 
     /// All outstanding requests.
     requests: Vec<db::entities::Request>,
@@ -136,6 +143,22 @@ mod tests {
         let mut c = pool.acquire().await.unwrap();
         let (family, parent, children, transactions, requests) =
             tests::populate(&mut c).unwrap();
+        let invitations = vec![
+            create::invitation(
+                &mut c,
+                Role::Parent,
+                "User 1",
+                "test1@example.com",
+                family.uid(),
+            ),
+            create::invitation(
+                &mut c,
+                Role::Parent,
+                "User 2",
+                "test2@example.com",
+                family.uid(),
+            ),
+        ];
 
         let res = execute(
             &mut pool.begin().await.unwrap(),
@@ -158,6 +181,9 @@ mod tests {
         assert!(res.members.contains(&parent));
         assert!(res.members.contains(&children.0));
         assert!(res.members.contains(&children.1));
+        assert_eq!(res.invitations.len(), invitations.len());
+        assert!(res.invitations.contains(&invitations[0]));
+        assert!(res.invitations.contains(&invitations[1]));
         assert_eq!(res.requests.len(), requests.len());
         for request in &requests {
             assert!(res.requests.contains(request));
