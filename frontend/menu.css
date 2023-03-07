@@ -43,8 +43,8 @@ section.menu {
     min-width: 0;
     padding: var(--margin-default);
     text-align: center;
-    transition: min-height var(--animation-tick),
-        min-width var(--animation-tick);
+    transition: min-height calc(3 * var(--animation-tick)),
+        min-width calc(3 * var(--animation-tick));
     width: 100%;
 }
 .loading section.menu {
@@ -59,7 +59,7 @@ section.menu {
 section.padding {
     min-height: 0;
     width: 100%;
-    transition: min-height var(--animation-tick);
+    transition: min-height calc(3 * var(--animation-tick));
 }
 .loading section.padding {
     min-height: calc(0.5 * (100vh - var(--logo-source-height)));
@@ -71,7 +71,7 @@ section.padding {
  */
 section.menu *.padding {
     min-width: 0;
-    transition: min-width var(--animation-tick);
+    transition: min-width calc(3 * var(--animation-tick));
 }
 .loading section.menu *.padding {
     min-width: calc(0.5 * (100% - var(--logo-source-width)));
@@ -95,7 +95,8 @@ section.menu div.content {
     justify-content: left;
     max-height: 40vh;
     width: 100%;
-    transition: height var(--animation-tick), width var(--animation-tick);
+    transition: height calc(3 * var(--animation-tick)),
+        width calc(3 * var(--animation-tick));
 }
 .loading section.menu div.content {
     height: var(--logo-source-height);
@@ -112,7 +113,7 @@ section.menu .menuitem svg {
     stroke-linecap: round;
     stroke-linejoin: round;
     width: var(--menuitem-size);
-    transition: opacity var(--animation-tick);
+    transition: opacity calc(3 * var(--animation-tick));
 }
 .ready section.menu .menuitem svg {
     opacity: 1;
@@ -127,7 +128,7 @@ section.menu svg.logo {
     height: var(--logo-target-height);
     opacity: 1;
     width: auto;
-    transition: height var(--animation-tick);
+    transition: height calc(3 * var(--animation-tick));
 }
 .loading section.menu svg.logo {
     height: var(--logo-source-height);
@@ -141,7 +142,7 @@ section.menu svg.logo path {
     height: 100%;
     opacity: 0;
     width: 100%;
-    transition: opacity var(--animation-tick);
+    transition: opacity calc(3 * var(--animation-tick));
 }
 .loading section.menu svg.logo path {
     opacity: 1;
@@ -165,7 +166,7 @@ section.menu svg.logo path.ticker {
     visibility: hidden;
 }
 .loading section.menu svg.logo path.ticker {
-    animation: calc(0.8 * var(--animation-tick)) ticker infinite ease-out;
+    animation: calc(0.2 * var(--animation-tick)) ticker infinite ease-out;
     visibility: visible;
 }
 @keyframes ticker {
