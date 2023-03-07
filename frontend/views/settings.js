@@ -7,8 +7,8 @@ import * as ui from "../ui.js";
 export default {
     initialize: async (_state) => {},
 
-    show: async (state, doc) => {
-        const [form, enableNotifications, logout] = ui.managed(doc);
+    show: async (view, state) => {
+        const [form, enableNotifications, logout] = ui.managed(view.doc);
 
         if (window.isSecureContext) {
             enableNotifications.checked = notifications.isEnabled(state);

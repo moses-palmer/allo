@@ -1,6 +1,6 @@
 <section class="app" id="overview">
     <h1 data-trans>
-        Hi, ${me.name}!
+        Hi, ${state.me.name}!
     </h1>
 
     <section class="for-child">
@@ -8,7 +8,7 @@
             My account
         </h2>
         <p data-trans>
-            I have ${account.balance.str} to spend.
+            I have ${state.account.balance.str} to spend.
         </p>
         <table id="my-transactions">
             <caption data-trans>
@@ -26,7 +26,7 @@
         </table>
 
         <div class="buttons row">
-            <a href="#transactions.${me.uid}" data-trans>See all</a>
+            <a href="#transactions/${state.me.uid}" data-trans>See all</a>
         </div>
     </section>
 

@@ -107,11 +107,11 @@ export const onReady = (handler) => {
  */
 export const update = async (state) => {
     // The view is encoded as the hash
-    const path = location.hash.substring(1) || await VIEWS.calculate(state);
-    const parts = path.split(".");
+    const path = location.hash.substring(1);
+    const parts = path.split("/");
     const name = parts[0].replaceAll("_", "-");
     const args = parts.slice(1);
-    const view = VIEWS[parts[0]];
+    const view = VIEWS[parts[0]] || await VIEWS.calculate(state);
 
     // If the hash signifies a real application view, enforce it
     if (view) {
@@ -128,21 +128,34 @@ export const update = async (state) => {
 
         // Apply the state and update the body class and children
         try {
-            state.context = await view.initialize(state, ...args);
+            // Generate the view context
+            const context = await view.initialize(state, ...args);
             applyState(state);
+
+            // Generate the view document
             const html = view.html.replaceAll(
                 /\$\{([^}]+)\}/g,
-                (_, path) => state.get(path));
-            const doc = (new DOMParser).parseFromString(html, "text/html");
-            await view.show(state, doc);
+                (_, path) => path.split(".").reduce(
+                    (acc, p) => p === "*" ? acc : acc ? acc[p] : null,
+                    {state, context}));
+
+            view.context = context;
+            view.doc = (new DOMParser).parseFromString(html, "text/html");
+
+            await view.show.call(null, view, state);
+
             if (document.body.classList.contains(LOADING_CLASS)) {
                 document.body.classList.remove(LOADING_CLASS);
                 await ON_READY();
                 document.body.classList.add(READY_CLASS);
             }
+
             document.body.classList.add(`${name}-view`);
             document.querySelector(MAIN_SELECTOR).append(
-                doc.querySelector(APP_SELECTOR));
+                view.doc.querySelector(APP_SELECTOR));
+            view.doc = document.querySelector(APP_SELECTOR);
+
+            return view;
         } catch (e) {
             if (typeof e === "string") {
                 location.hash = "#" + e;
@@ -158,7 +171,7 @@ export const update = async (state) => {
 
 
 /**
- * Calculates the length, in milliseconds, och an animation.
+ * Calculates the length, in milliseconds, of an animation.
  *
  * This function assumes that the CSS variable `--animation-tick` is a value in
  * seconds.
@@ -463,7 +476,7 @@ export const transaction = async (state, transaction, buttons) => {
  * become clickable if a transaction is specified.
  *
  * @param state
- *     The applicaiton state.
+ *     The application state.
  * @param tr
  *     The table row element.
  * @param t
@@ -503,8 +516,8 @@ export const requestRow = (state, tr, r) => {
     const [description, amount] = managed(tr);
     if (r) {
         description.innerText = r.name;
-        description.onclick = () => location.href =
-            `#request.${r.user_uid}.${r.uid}`;
+        description.onclick = () => location.hash =
+            `#request/${r.user_uid}/${r.uid}`;
         amount.innerText = currency(state, r.amount);
     } else {
         description.innerHTML = "&nbsp;";

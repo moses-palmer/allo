@@ -15,11 +15,11 @@ export default {
         return {user};
     },
 
-    show: async (state, doc) => {
-        const [earlier, later] = ui.managed(doc);
+    show: async (view, state) => {
+        const [earlier, later] = ui.managed(view.doc);
 
         const [rowTemplate, target] = ui.extractElement(
-            doc, "#transactions template");
+            view.doc, "#transactions template");
         for (let i = 0; i < ROWS; i++) {
             target.appendChild(ui.transactionRow(
                 state, rowTemplate.content.cloneNode(true)));
@@ -34,7 +34,7 @@ export default {
                     ? 0
                     : offset + d;
                 const {transactions} = await api.transaction.list(
-                    state, state.context.user.uid, next, limit);
+                    state, view.context.user.uid, next, limit);
 
                 earlier.disabled = transactions.length < limit;
                 later.disabled = next === 0;

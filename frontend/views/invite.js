@@ -6,8 +6,8 @@ import * as ui from "../ui.js";
 export default {
     initialize: (_state) => {},
 
-    show: async (state, doc) => {
-        const form = doc.getElementById("form");
+    show: async (view, state) => {
+        const form = view.doc.getElementById("form");
 
         let allowanceRequired = true;
         const targets = form.querySelectorAll("input[name ^= 'allowance-']");
@@ -29,7 +29,7 @@ export default {
 
         if ((Object.keys(state.family.members).length
                 + state.family.invitations.length) < 2) {
-            doc.querySelector("#cancel").style.display = "none";
+            view.doc.querySelector("#cancel").style.display = "none";
         }
 
         form.addEventListener("submit", async (e) => {
