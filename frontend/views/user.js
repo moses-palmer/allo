@@ -14,9 +14,9 @@ export default {
         return await api.user.get(state, user_uid);
     },
 
-    show: async (state, doc) => {
+    show: async (view, state) => {
         const scheduleOption = () => {
-            const value = state.context.allowance?.schedule.toLowerCase();
+            const value = view.context.allowance?.schedule.toLowerCase();
             return parentAllowance.querySelector(`option[value ="${value}"]`);
         };
         const queryRemove = async () => {
@@ -26,7 +26,7 @@ export default {
                 name.addEventListener(
                     "input",
                     () => name.setCustomValidity(
-                        (name.value === state.context.user.name)
+                        (name.value === view.context.user.name)
                             ? ""
                             : "invalid"));
                 const r =  await ui.show(
@@ -35,7 +35,7 @@ export default {
                         {name: "yes", text: _("Yes"), classes: ["remove"]},
                         {name: "no", text: _("No"), classes: []},
                     ]);
-                if (r === "yes" && name.value === state.context.user.name) {
+                if (r === "yes" && name.value === view.context.user.name) {
                     return true;
                 } else if (r === "no") {
                     return false;
@@ -46,16 +46,16 @@ export default {
         };
 
         const [role, childAllowance, _schedule, parentAllowance, remove] =
-            ui.managed(doc);
-        const removeTemplate = doc.querySelector("template.remove");
+            ui.managed(view.doc);
+        const removeTemplate = view.doc.querySelector("template.remove");
 
         // Users cannot remove themselves
-        if (state.context.user.uid === state.me.uid) {
+        if (view.context.user.uid === state.me.uid) {
             remove.style.display = "none";
         }
 
         // If the user does not have any allowance, hide the display and form
-        if (!state.context.allowance) {
+        if (!view.context.allowance) {
             childAllowance.style.display = "none";
             parentAllowance.style.display = "none";
         } else {
@@ -68,8 +68,8 @@ export default {
                             const data = new FormData(parentAllowance);
                             await api.user.allowance(
                                 state,
-                                state.context.user.uid,
-                                state.context.allowance.uid,
+                                view.context.user.uid,
+                                view.context.allowance.uid,
                                 parseInt(data.get("allowance-amount")),
                                 data.get("allowance-schedule"));
                         } catch (e) {
@@ -85,29 +85,29 @@ export default {
                 });
         }
 
-        if (state.context.user.role === "child") {
+        if (view.context.user.role === "child") {
             role.innerText = _("{user} is a child in the {family} family.")
                 .format({
-                    user: state.context.user.name,
+                    user: view.context.user.name,
                     family: state.family.name,
                 });
-        } else if (state.context.user.role === "parent") {
+        } else if (view.context.user.role === "parent") {
             role.innerText = _("{user} is a parent in the {family} family.")
                 .format({
-                    user: state.context.user.name,
+                    user: view.context.user.name,
                     family: state.family.name,
                 });
         }
 
         if (state.me.role === "child") {
-            const [schedule] = ui.managed(doc);
+            const [schedule] = ui.managed(view.doc);
             schedule.innerText = scheduleOption()?.innerText;
         }
 
         remove.querySelector("input").addEventListener("click", async () => {
             if (await queryRemove()) {
                 try {
-                    await api.family.remove(state, state.context.user.uid);
+                    await api.family.remove(state, view.context.user.uid);
                     history.back();
                 } catch (e) {
                     switch (e.status) {

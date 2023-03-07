@@ -10,7 +10,7 @@ export default {
         return {request, user};
     },
 
-    show: async (state, doc) => {
+    show: async (view, state) => {
         const queryRemove = async () => await ui.show(
             declineTemplate.content.cloneNode(true),
             [
@@ -35,11 +35,11 @@ export default {
             }
         };
 
-        const [link, iframe, remove, grant] = ui.managed(doc);
-        const declineTemplate = doc.querySelector("template.decline");
-        const grantTemplate = doc.querySelector("template.grant");
+        const [link, iframe, remove, grant] = ui.managed(view.doc);
+        const declineTemplate = view.doc.querySelector("template.decline");
+        const grantTemplate = view.doc.querySelector("template.grant");
 
-        if (!state.context.request.url) {
+        if (!view.context.request.url) {
             link.style.display = "none";
             iframe.style.display = "none";
         }
@@ -49,8 +49,8 @@ export default {
                 try {
                     await api.request.decline(
                         state,
-                        state.context.request.user_uid,
-                        state.context.request.uid);
+                        view.context.request.user_uid,
+                        view.context.request.uid);
                     location.hash = "#overview";
                 } catch(e) {
                     ui.applyState(state);
@@ -79,8 +79,8 @@ export default {
                 try {
                     await api.request.grant(
                         state,
-                        state.context.request.user_uid,
-                        state.context.request.uid,
+                        view.context.request.user_uid,
+                        view.context.request.uid,
                         cost);
                     location.hash = "#overview";
                 } catch(e) {

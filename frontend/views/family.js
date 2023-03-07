@@ -5,7 +5,7 @@ import * as ui from "../ui.js";
 export default {
     initialize: async (_state) => {},
 
-    show: async (state, doc) => {
+    show: async (view, state) => {
         const memberRow = (state, m, template) => {
             const tr = template.content.cloneNode(true);
             const [name, email] = ui.managed(tr);
@@ -14,21 +14,21 @@ export default {
                 : m.name;
             name.addEventListener(
                 "click",
-                () => location.href = `#user.${m.uid}`);
+                () => location.hash = `#user/${m.uid}`);
             email.innerText = m.email;
             return tr;
         };
 
         const table = (selector, all, mapper) => {
-            const [rowTemplate, target] = ui.extractElement(doc, selector);
+            const [rowTemplate, target] = ui.extractElement(view.doc, selector);
             all
                 .forEach(t => target.appendChild(
                     mapper(state, t, rowTemplate)));
         };
 
-        doc.querySelector("#add-member").addEventListener(
+        view.doc.querySelector("#add-member").addEventListener(
             "click",
-            () => location.href = state.server?.features.includes("email")
+            () => location.hash = state.server?.features.includes("email")
                 ? "#invite"
                 : "#add-member"
         );

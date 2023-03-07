@@ -20,7 +20,7 @@ export default {
             })
     },
 
-    show: async (state, doc) => {
+    show: async (view, state) => {
         const transactionRow = (state, t, template) => ui.transactionRow(
             state, template.content.cloneNode(true), t);
 
@@ -28,7 +28,7 @@ export default {
             state, template.content.cloneNode(true), r);
 
         const childTable = (selector, all, mapper) => {
-            const [rowTemplate, target] = ui.extractElement(doc, selector);
+            const [rowTemplate, target] = ui.extractElement(view.doc, selector);
             all
                 .filter((t) => t.user_uid === state.me.uid)
                 .forEach(t => target.appendChild(
@@ -37,7 +37,7 @@ export default {
 
         const parentTable = (selector, all, mapper, title, transformer) => {
             const [tableTemplate, tableTarget] = ui.extractElement(
-                doc, selector);
+                view.doc, selector);
             const children = Object.entries(state.family.members)
                 .filter(([_, user]) => user.role === "child");
             children
@@ -66,7 +66,7 @@ export default {
 
         const invitationsTable = (selector, invitations) => {
             const [invitationRowTemplate, tableTarget] = ui.extractElement(
-                doc, selector);
+                view.doc, selector);
             invitations.forEach((i) => {
                 const el = invitationRowTemplate.content.cloneNode(true);
                 const [name, email] = ui.managed(el);
@@ -79,7 +79,7 @@ export default {
             }
         };
 
-        const giftTemplate = doc.querySelector(".gift.template").content;
+        const giftTemplate = view.doc.querySelector(".gift.template").content;
         const gift = async (state, child) => {
             const body = giftTemplate.cloneNode(true);
             const [name, currencyPre, amount, currencyPost, description] =
@@ -107,34 +107,34 @@ export default {
         if (state.me.role === "child") {
             childTable(
                 "#my-transactions template",
-                state.context.transactions,
+                view.context.transactions,
                 transactionRow);
             childTable(
                 "#my-requests template",
-                state.context.requests,
+                view.context.requests,
                 requestRow);
         }
 
         if (state.me.role === "parent") {
             parentTable(
                 "#family-transactions",
-                state.context.transactions,
+                view.context.transactions,
                 transactionRow,
                 (child) => child.name,
                 (child, table) => {
                     const [_name, link] = ui.managed(table);
                     link.innerText = _("See all for {}")
                             .format(child.name);
-                    link.href = `#transactions.${child.uid}`;
+                    link.href = `#transactions/${child.uid}`;
                 });
             parentTable(
                 "#family-requests",
-                state.context.requests,
+                view.context.requests,
                 requestRow,
                 (child) => _("{user} ({amount})").format({
                     user: child.name,
                     amount: ui.currency(
-                        state, state.context.balances[child.uid]),
+                        state, view.context.balances[child.uid]),
                 }),
                 (child, table) => {
                     const [_name, link] = ui.managed(table);

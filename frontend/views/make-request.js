@@ -6,8 +6,8 @@ import * as ui from "../ui.js";
 export default {
     initialize: async (_state) => {},
 
-    show: async (state, doc) => {
-        const form = doc.getElementById("form");
+    show: async (view, state) => {
+        const form = view.doc.getElementById("form");
 
         form.addEventListener("submit", async (e) => {
             e.preventDefault();

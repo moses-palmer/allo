@@ -43,18 +43,18 @@ const module = {
         // If we have no cached email address, we assume the user has not yet
         // registered
         if (state.me.email.length === 0) {
-            return "register";
+            return module["register"];
         }
 
         // Check whether we are logged in
         try {
             await api.session.introspect(state);
         } catch (e) {
-            return "login";
+            return module["login"];
         }
 
         // Default to the overview
-        return "overview";
+        return module["overview"];
     },
 };
 

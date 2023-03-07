@@ -7,8 +7,8 @@ import * as ui from "../ui.js";
 export default {
     initialize: (_state) => {},
 
-    show: async (state, doc) => {
-        const form = doc.getElementById("form");
+    show: async (view, state) => {
+        const form = view.doc.getElementById("form");
 
         const passwords = form
             .querySelectorAll("input[type = password]");
@@ -35,7 +35,7 @@ export default {
                 }));
 
         const firstMember = Object.keys(state.family.members).length < 2;
-        const cancel = doc.querySelector("#cancel");
+        const cancel = view.doc.querySelector("#cancel");
         if (firstMember) {
             cancel.style.display = "none";
         }

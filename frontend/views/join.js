@@ -19,14 +19,14 @@ export default {
                 ui.applyRole(r.invitation.role);
                 return {mode, ...r};
             } else {
-                throw `join.${invitation}.${MODES[0]}`;
+                throw `join/${invitation}/${MODES[0]}`;
             }
         }),
 
-    show: async (state, doc) => {
-        const form = doc.getElementById("form");
+    show: async (view, state) => {
+        const form = view.doc.getElementById("form");
 
-        ui.applyMode(doc, MODES, state.context.mode);
+        ui.applyMode(view.doc, MODES, view.context.mode);
 
         const passwords = form
             .querySelectorAll("input[type = password]");
@@ -41,7 +41,7 @@ export default {
 
             await api.invitation.accept(
                 state,
-                state.context.invitation.uid,
+                view.context.invitation.uid,
                 data.get("password"),
             ).then(() => location.hash = "#login")
             .catch(async (e) => {

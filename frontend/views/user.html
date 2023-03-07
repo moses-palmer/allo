@@ -19,7 +19,7 @@
         </h2>
         <p>
             <span data-trans>Weekly allowance:</span>
-            <span>${currency.format.0}${context.allowance.amount}${currency.format.1}</span>.
+            <span>${state.currency.format.0}${context.allowance.amount}${state.currency.format.1}</span>.
         </p>
         <p>
             <span data-trans>Allowance is paid on:</span>
@@ -35,14 +35,14 @@
             Weekly allowance:
         </label>
         <div class="row">
-            <span>${currency.format.0}</span>
+            <span>${state.currency.format.0}</span>
             <input
                 class="allowance-input"
                 type="number"
                 name="allowance-amount"
 
                 value="${context.allowance.amount}" />
-            <span>${currency.format.1}</span>
+            <span>${state.currency.format.1}</span>
         </div>
 
         <label for="allowance-schedule" data-trans>
@@ -89,8 +89,8 @@
         <h2>${context.user.name}</h2>
 
         <p data-trans>
-            Do you want to remove ${context.user.name} from the ${family.name}
-            family? This cannot be undone.
+            Do you want to remove ${context.user.name} from the
+            ${state.family.name} family? This cannot be undone.
         </p>
 
         <form>
