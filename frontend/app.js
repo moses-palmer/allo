@@ -47,14 +47,21 @@ const LOGO_SELECTOR = "#logo";
 
 
 const load = async () => {
-    const errorManager = (title) => {
-        return async (e) => {
-            try {
-                console.error(e, e.stack);
-            } catch (e) {}
+    const errorManager = async () => {
+        try {
+            console.error(e, e.stack);
+        } catch (e) {}
+
+        if (e.reason !== "connection") {
+            const title = _("An unexpected error occurred");
+            const message = _("The error message is: {}").format(
+                e.message && e.filename
+                    ? `${e.message}; ${e.filename}:${e.lineno}`
+                    : e.reason);
+
             const response = await ui.message(
                 title,
-                _("The error message is: {}").format(e.reason),
+                message,
                 [
                     {name: "ignore", text: _("Ignore"), classes: ["cancel"]},
                     {name: "reload", text: _("Reload"), classes: ["ok"]},
@@ -62,14 +69,10 @@ const load = async () => {
             if (response === "reload") {
                 location.reload();
             }
-        };
+        }
     };
-    window.addEventListener(
-        "error",
-        errorManager(_("An unexpected error occurred")));
-    window.addEventListener(
-        "unhandledrejection",
-        errorManager(_("An unexpected error occurred")));
+    window.addEventListener("error", errorManager);
+    window.addEventListener("unhandledrejection", errorManager);
 
     const db = await connect();
     const state = await State.load(
@@ -104,7 +107,7 @@ const load = async () => {
                 .body.innerHTML;
         }));
 
-    api.defaultErrorHandler(errorManager(_("Failed to contact Allo")));
+    api.defaultErrorHandler(errorManager);
 
     window.addEventListener("hashchange", (e) => {
         e.preventDefault();
