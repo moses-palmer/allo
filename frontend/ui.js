@@ -158,7 +158,7 @@ export const update = async (state) => {
 
 
 /**
- * Calculates the length, in milliseconds, och an animation.
+ * Calculates the length, in milliseconds, of an animation.
  *
  * This function assumes that the CSS variable `--animation-tick` is a value in
  * seconds.
@@ -463,7 +463,7 @@ export const transaction = async (state, transaction, buttons) => {
  * become clickable if a transaction is specified.
  *
  * @param state
- *     The applicaiton state.
+ *     The application state.
  * @param tr
  *     The table row element.
  * @param t
