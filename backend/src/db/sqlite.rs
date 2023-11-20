@@ -1,29 +1,9 @@
-use std::str::FromStr;
-
-use serde::{Deserialize, Serialize};
-
-pub use sqlx::sqlite::SqliteConnectOptions as ConnectOptions;
-
-/// The database type.
-pub type Database = sqlx::Sqlite;
+#[cfg(test)]
+use weru::database::{Configuration, Engine};
 
 /// A migrator for the database schema.
-pub const MIGRATOR: sqlx::migrate::Migrator =
-    sqlx::migrate!("src/db/migrations/sqlite/");
-
-/// The database configuration, in the form of a connection string.
-#[derive(Clone, Deserialize, Serialize)]
-pub struct Configuration {
-    /// The connection string to use.
-    connection_string: String,
-}
-
-/// The character used to represent parameters in SQL expressions.
-macro_rules! parameter {
-    ($name:ident) => {
-        "?"
-    };
-}
+pub const MIGRATOR: weru::database::sqlx::migrate::Migrator =
+    weru::database::sqlx::migrate!("src/db/migrations/sqlite/");
 
 /// The last inserted row ID.
 macro_rules! last_row_id {
@@ -37,26 +17,18 @@ macro_rules! last_row_id {
 /// # Panics
 /// This function will panic if the memory database pool cannot be created.
 #[cfg(test)]
-pub async fn test_pool() -> super::Pool {
-    let pool = super::Pool::connect_with(
-        Configuration {
-            connection_string: "sqlite::memory:".into(),
-        }
-        .connect_options()
-        .unwrap(),
-    )
-    .await
-    .unwrap();
-
-    MIGRATOR.run(&pool).await.unwrap();
-
-    pool
-}
-
-impl Configuration {
-    /// Generates database connect options.
-    pub fn connect_options(&self) -> Result<ConnectOptions, super::Error> {
-        Ok(ConnectOptions::from_str(&self.connection_string)?
-            .create_if_missing(true))
+pub async fn test_engine() -> Engine {
+    let engine = Configuration {
+        connection_string: "sqlite::memory:".into(),
     }
+    .engine()
+    .await
+    .expect("test engine");
+
+    MIGRATOR
+        .run(&mut engine.connection().await.expect("database connection"))
+        .await
+        .expect("database migration");
+
+    engine
 }

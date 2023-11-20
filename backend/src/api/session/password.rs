@@ -1,61 +1,49 @@
-use sqlx::prelude::*;
-
-use std::sync::Arc;
-
-use actix_session::Session;
-use actix_web::{post, web, Responder};
-use serde::{Deserialize, Serialize};
+use crate::prelude::*;
 
 use crate::api;
 use crate::api::notify::{Event, Notify};
 use crate::api::session::State;
-use crate::db;
-use crate::db::entities::{Entity, Password};
+use crate::db::entities::Password;
 use crate::db::values::PasswordHash;
-use crate::notifications::Notifier;
 
 /// Changes the password for a user.
 #[post("session/password")]
 pub async fn handle(
-    pool: web::Data<db::Pool>,
-    notifier: web::Data<Arc<Notifier<Event>>>,
+    database: web::Data<DatabaseEngine>,
+    channel: web::Data<ChannelEngine>,
     session: Session,
     req: web::Json<Req>,
 ) -> impl Responder {
-    let mut connection = pool.acquire().await?;
-    let mut trans = connection.begin().await?;
+    let mut conn = database.connection().await?;
+    let mut tx = conn.begin().await?;
     let state = State::load(&session)?;
     {
-        let res = execute(&mut trans, state.clone(), &req.into_inner()).await?;
+        let res = execute(&mut tx, state.clone(), &req.into_inner()).await?;
         Notify::Member {
             event: Event::Logout {},
             user: state.user_uid.clone(),
         }
-        .send(&mut *trans, &notifier, &state.user_uid)
+        .send(&mut tx, &channel, &state.user_uid)
         .await;
-        trans.commit().await?;
+        tx.commit().await?;
         super::State::clear(&session);
         api::ok(res)
     }
 }
 
 pub async fn execute<'a>(
-    e: &mut api::Executor<'a>,
+    tx: &mut Tx<'a>,
     state: State,
     req: &Req,
 ) -> Result<Res, api::Error> {
     let password =
-        api::argument(Password::read(&mut *e, &state.user_uid).await?)?;
-    if password
-        .hash()
-        .verify(&req.current_password)
-        .unwrap_or(false)
-    {
+        api::argument(Password::read(tx.as_mut(), &state.user_uid).await?)?;
+    if password.hash.verify(&req.current_password).unwrap_or(false) {
         Password::new(
-            password.user_uid().clone(),
+            password.user_uid.clone(),
             api::argument(PasswordHash::from_password(&req.new_password))?,
         )
-        .update(&mut *e)
+        .update(tx.as_mut())
         .await?;
         Ok(Res)
     } else {
@@ -79,63 +67,70 @@ pub struct Res;
 mod tests {
     use crate::api::tests;
     use crate::db::entities::create;
-    use crate::db::test_pool;
+    use crate::db::test_engine;
 
     use super::*;
 
     #[actix_rt::test]
     async fn success() {
-        let pool = test_pool().await;
-        let mut c = pool.acquire().await.unwrap();
-        let (family, parent, _, _, _) = tests::populate(&mut c).unwrap();
-        create::password(&mut c, "123", parent.uid());
+        let database = test_engine().await;
+        let mut conn = database.connection().await.unwrap();
+        let (family, parent, _, _, _) = tests::populate(&mut conn).unwrap();
+        create::password(&mut conn, "123", &parent.uid);
 
-        let mut trans = c.begin().await.unwrap();
-        execute(
-            &mut trans,
-            State {
-                user_uid: parent.uid().clone(),
-                family_uid: family.uid().clone(),
-                role: parent.role().clone(),
-            },
-            &Req {
-                current_password: "123".into(),
-                new_password: "456".into(),
-            },
-        )
-        .await
-        .unwrap();
-        trans.commit().await.unwrap();
+        {
+            let mut tx = conn.begin().await.unwrap();
+            execute(
+                &mut tx,
+                State {
+                    user_uid: parent.uid.clone(),
+                    family_uid: family.uid.clone(),
+                    role: parent.role.clone(),
+                },
+                &Req {
+                    current_password: "123".into(),
+                    new_password: "456".into(),
+                },
+            )
+            .await
+            .unwrap();
+            tx.commit().await.unwrap();
+        }
 
-        let password =
-            Password::read(&mut c, parent.uid()).await.unwrap().unwrap();
-        assert!(password.hash().verify("456").unwrap());
+        let password = Password::read(conn.as_mut(), &parent.uid)
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(password.hash.verify("456").unwrap());
     }
 
     #[actix_rt::test]
     async fn forbidden() {
-        let pool = test_pool().await;
-        let mut c = pool.acquire().await.unwrap();
-        let (family, parent, _, _, _) = tests::populate(&mut c).unwrap();
-        create::password(&mut c, "123", parent.uid());
+        let database = test_engine().await;
+        let mut conn = database.connection().await.unwrap();
+        let (family, parent, _, _, _) = tests::populate(&mut conn).unwrap();
+        create::password(&mut conn, "123", &parent.uid);
 
-        let mut trans = c.begin().await.unwrap();
-        let err = execute(
-            &mut trans,
-            State {
-                user_uid: parent.uid().clone(),
-                family_uid: family.uid().clone(),
-                role: parent.role().clone(),
-            },
-            &Req {
-                current_password: "456".into(),
-                new_password: "789".into(),
-            },
-        )
-        .await
-        .err()
-        .unwrap();
-        trans.commit().await.unwrap();
+        let err = {
+            let mut tx = conn.begin().await.unwrap();
+            let r = execute(
+                &mut tx,
+                State {
+                    user_uid: parent.uid.clone(),
+                    family_uid: family.uid.clone(),
+                    role: parent.role.clone(),
+                },
+                &Req {
+                    current_password: "456".into(),
+                    new_password: "789".into(),
+                },
+            )
+            .await
+            .err()
+            .unwrap();
+            tx.commit().await.unwrap();
+            r
+        };
 
         assert_eq!(err, api::Error::forbidden("invalid password"));
     }

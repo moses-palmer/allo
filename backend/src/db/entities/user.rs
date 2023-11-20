@@ -1,24 +1,28 @@
+use crate::prelude::*;
+
+use weru::database::{entity, parameter, sqlx};
+
 use crate::db::values::{EmailAddress, Role, UID};
 
-entity!(
-    /// A description of a user.
-    pub struct User in Users {
-        /// The unique identifier.
-        uid: UID,
+/// A description of a user.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[entity(Users)]
+pub struct User {
+    /// The unique identifier.
+    pub uid: UID,
 
-        /// The role of this user.
-        role: Role,
+    /// The role of this user.
+    pub role: Role,
 
-        /// The user name.
-        name: String,
+    /// The user name.
+    pub name: String,
 
-        /// The user email address, if any validated email address exists.
-        email: Option<EmailAddress>,
+    /// The user email address, if any validated email address exists.
+    pub email: Option<EmailAddress>,
 
-        /// The unique identifier of the family.
-        family_uid: UID,
-    }
-);
+    /// The unique identifier of the family.
+    pub family_uid: UID,
+}
 
 impl User {
     /// The SQL statement used to load all members of a family.
@@ -26,24 +30,21 @@ impl User {
         "SELECT uid, role, name, email, family_uid \
         FROM Users \
         WHERE family_uid = ",
-        parameter!(family_uid),
+        parameter!(1),
     );
 
     /// Loads all members of a family.
     ///
     /// # Arguments
-    /// *  `e` - The database executor.
+    /// *  `tx` - The database transaction.
     /// *  `family_uid` - The family UID.
-    pub async fn read_for_family<'a, E>(
-        e: E,
+    pub async fn read_for_family<'a>(
+        tx: &mut Tx<'a>,
         family_uid: &UID,
-    ) -> Result<Vec<Self>, crate::db::Error>
-    where
-        E: ::sqlx::Executor<'a, Database = crate::db::Database>,
-    {
+    ) -> Result<Vec<Self>, DatabaseError> {
         sqlx::query_as(Self::READ_BY_FAMILY)
             .bind(family_uid)
-            .fetch_all(e)
+            .fetch_all(tx.as_mut())
             .await
     }
 }
@@ -61,10 +62,10 @@ entity_tests! {
             name: "New Test User".into(),
             ..e
         };
-        prepare: |c, e| {
+        prepare: |tx, e| {
             crate::db::entities::family::tests::entity_with_id(
-                e.family_uid().clone(),
-            ).create(c).await
+                e.family_uid.clone(),
+            ).create(tx.as_mut()).await
         };
     }
 }
@@ -74,47 +75,46 @@ mod impl_tests {
     use actix_rt;
 
     use crate::db::entities::create;
-    use crate::db::test_pool;
+    use crate::db::test_engine;
     use crate::db::values::Role;
 
     use super::*;
 
     #[actix_rt::test]
     async fn read_for_family() {
-        let pool = test_pool().await;
-        {
-            let mut c = pool.acquire().await.unwrap();
+        let database = test_engine().await;
+        let mut conn = database.connection().await.unwrap();
 
-            let family1 = create::family(&mut c, "Family 1");
-            let family2 = create::family(&mut c, "Family 2");
-            let user1 = create::user(
-                &mut c,
-                Role::Parent,
-                "User 1",
-                "test1@example.com",
-                family1.uid(),
-            );
-            let user2 = create::user(
-                &mut c,
-                Role::Parent,
-                "User 2",
-                "test2@example.com",
-                family1.uid(),
-            );
-            create::user(
-                &mut c,
-                Role::Parent,
-                "User 3",
-                "test3@example.com",
-                family2.uid(),
-            );
+        let family1 = create::family(&mut conn, "Family 1");
+        let family2 = create::family(&mut conn, "Family 2");
+        let user1 = create::user(
+            &mut conn,
+            Role::Parent,
+            "User 1",
+            "test1@example.com",
+            &family1.uid,
+        );
+        let user2 = create::user(
+            &mut conn,
+            Role::Parent,
+            "User 2",
+            "test2@example.com",
+            &family1.uid,
+        );
+        create::user(
+            &mut conn,
+            Role::Parent,
+            "User 3",
+            "test3@example.com",
+            &family2.uid,
+        );
+        let mut tx = conn.begin().await.unwrap();
 
-            let users = User::read_for_family(&mut c, user1.family_uid())
-                .await
-                .unwrap();
-            assert_eq!(users.len(), 2);
-            assert!(users.contains(&user1));
-            assert!(users.contains(&user2));
-        }
+        let users = User::read_for_family(&mut tx, &user1.family_uid)
+            .await
+            .unwrap();
+        assert_eq!(users.len(), 2);
+        assert!(users.contains(&user1));
+        assert!(users.contains(&user2));
     }
 }

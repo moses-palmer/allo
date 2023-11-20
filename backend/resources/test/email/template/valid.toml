@@ -1,7 +1,0 @@
-[l1.t1]
-wrapping = "t1.l1.html"
-subject = "subject"
-body = "t1.l1.md"
-
-[l1.t1.attachments]
-file1 = { content_type = "text/plain", path = "attachment.txt" }

@@ -1,15 +1,19 @@
+use crate::prelude::*;
+
+use weru::database::entity;
+
 use crate::db::values::CurrencyFormat;
 
-entity!(
-    /// A description of a supported currency.
-    pub struct Currency in Currencies {
-        /// The currency name.
-        name: String,
+/// A description of a supported currency.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[entity(Currencies)]
+pub struct Currency {
+    /// The currency name.
+    name: String,
 
-        /// The format string used to stringify values in this currency.
-        format: CurrencyFormat,
-    }
-);
+    /// The format string used to stringify values in this currency.
+    format: CurrencyFormat,
+}
 
 entity_tests! {
     Currency[String = String::from("TST")] {

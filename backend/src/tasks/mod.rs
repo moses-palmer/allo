@@ -1,14 +1,15 @@
-use actix::prelude::*;
+use crate::prelude::*;
 
 use std::error;
 use std::fmt;
 use std::time::Duration;
 
-use async_trait::async_trait;
-use futures::executor::block_on;
-use sqlx::Acquire;
+use weru::async_trait::async_trait;
+use weru::database::sqlx::Acquire;
+use weru::database::{parameter, sqlx, Connection};
+use weru::futures::executor::block_on;
+use weru::log;
 
-use crate::db;
 use crate::db::values::Timestamp;
 
 pub mod allowance;
@@ -16,7 +17,7 @@ pub mod allowance;
 /// A repeating collection of tasks.
 pub struct Scheduled {
     /// A database pool used by this manager and the tasks.
-    pool: db::Pool,
+    engine: DatabaseEngine,
 
     /// The list of scheduled tasks.
     tasks: Vec<ScheduledTask>,
@@ -34,11 +35,11 @@ pub trait Task {
     /// Run this task.
     ///
     /// # Arguments
-    /// *  `transaction` - The containing transaction.
+    /// *  `tx` - The containing transaction.
     /// *  `timestamp` - The current timestamp.
-    async fn run(
+    async fn run<'a>(
         &self,
-        transaction: &mut db::Transaction,
+        tx: &mut Tx<'a>,
         timestamp: Timestamp,
     ) -> Result<(), Error>;
 }
@@ -59,7 +60,7 @@ pub enum ScheduledTask {
 #[derive(Debug)]
 pub enum Error {
     /// A database error occcurred.
-    DatabaseError(db::Error),
+    DatabaseError(DatabaseError),
 }
 
 /// A collection of multiple task related errors.
@@ -74,10 +75,10 @@ impl Scheduled {
         SELECT last_run \
         FROM ScheduledTasks \
         WHERE task = ",
-        parameter!(task),
+        parameter!(1),
         " ",
         "AND last_run = ",
-        parameter!(last_run),
+        parameter!(2),
     );
 
     /// The SQL used to update the last run timestamp of a scheduled task.
@@ -85,11 +86,11 @@ impl Scheduled {
         "\
         INSERT INTO ScheduledTasks (task, last_run, time)
         VALUES (",
-        parameter!(task),
+        parameter!(1),
         ", ",
-        parameter!(last_run),
+        parameter!(2),
         ", ",
-        parameter!(time),
+        parameter!(3),
         ")",
     );
 
@@ -97,9 +98,9 @@ impl Scheduled {
     ///
     /// # Arguments
     /// *  `pool` - The database connection pool.
-    pub fn new(pool: db::Pool) -> Self {
+    pub fn new(engine: DatabaseEngine) -> Self {
         Self {
-            pool,
+            engine,
             tasks: Vec::new(),
             runner: None,
         }
@@ -123,7 +124,7 @@ impl Scheduled {
         &self,
         timestamp: Timestamp,
     ) -> Result<(), MultipleErrors> {
-        let mut connection = self.pool.acquire().await?;
+        let mut connection = self.engine.connection().await?;
 
         let mut errors = None;
 
@@ -158,14 +159,14 @@ impl Scheduled {
     pub async fn check_and_run(
         &self,
         task: &ScheduledTask,
-        connection: &mut db::Connection,
+        connection: &mut Connection,
         timestamp: Timestamp,
     ) -> Result<(), Error> {
-        let mut transaction = connection.begin().await?;
-        if self.check(&task, &mut transaction, timestamp).await? {
-            task.task().run(&mut transaction, timestamp).await?;
-            self.update(&task, &mut transaction, timestamp).await?;
-            transaction.commit().await?;
+        let mut tx = connection.begin().await?;
+        if self.check(&task, &mut tx, timestamp).await? {
+            task.task().run(&mut tx, timestamp).await?;
+            self.update(&task, &mut tx, timestamp).await?;
+            tx.commit().await?;
         }
 
         Ok(())
@@ -184,7 +185,7 @@ impl Scheduled {
     async fn check<'a>(
         &self,
         task: &ScheduledTask,
-        transaction: &mut db::Transaction<'a>,
+        tx: &mut Tx<'a>,
         timestamp: Timestamp,
     ) -> Result<bool, Error> {
         let name = task.task().name();
@@ -192,7 +193,7 @@ impl Scheduled {
         Ok(sqlx::query(Self::CHECK)
             .bind(name)
             .bind(&last_run)
-            .fetch_optional(transaction)
+            .fetch_optional(tx.as_mut())
             .await?
             .is_none())
     }
@@ -201,21 +202,21 @@ impl Scheduled {
     ///
     /// # Arguments
     /// *  `task` - The task to update.
-    /// *  `transaction` - The database transaction.
+    /// *  `tx` - The database transaction.
     /// *  `timestamp` - The timestamp to update to.
     async fn update<'a>(
         &self,
         task: &ScheduledTask,
-        transaction: &mut db::Transaction<'a>,
+        tx: &mut Tx<'a>,
         timestamp: Timestamp,
-    ) -> Result<(), db::Error> {
+    ) -> Result<(), DatabaseError> {
         let name = task.task().name();
         let last_run = ScheduledTaskTimestamp(task, timestamp).to_string();
         sqlx::query(Self::UPDATE)
             .bind(name)
             .bind(last_run)
             .bind(timestamp)
-            .execute(transaction)
+            .execute(tx.as_mut())
             .await
             .map(|_| ())
     }
@@ -307,9 +308,9 @@ impl AsRef<Box<dyn Task>> for ScheduledTask {
     }
 }
 
-impl From<db::Error> for Error {
+impl From<DatabaseError> for Error {
     #[inline]
-    fn from(source: db::Error) -> Self {
+    fn from(source: DatabaseError) -> Self {
         Self::DatabaseError(source)
     }
 }
@@ -332,9 +333,9 @@ impl error::Error for Error {
     }
 }
 
-impl From<db::Error> for MultipleErrors {
+impl From<DatabaseError> for MultipleErrors {
     #[inline]
-    fn from(source: db::Error) -> Self {
+    fn from(source: DatabaseError) -> Self {
         Self(vec![Error::DatabaseError(source)])
     }
 }
@@ -366,7 +367,7 @@ mod tests {
     use std::thread::sleep;
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    use crate::db::test_pool;
+    use crate::db::test_engine;
 
     use super::*;
 
@@ -381,7 +382,7 @@ mod tests {
             std::thread::spawn(move || {
                 let sys = System::new();
                 sys.block_on(async move {
-                    let _addr = Scheduled::new(test_pool().await)
+                    let _addr = Scheduled::new(test_engine().await)
                         .with(ScheduledTask::Custom(
                             Box::new(TestTask::new("test-task", scounter)),
                             Box::new(|t| {
@@ -408,7 +409,7 @@ mod tests {
 
     #[actix_rt::test]
     async fn run_simple() {
-        let pool = test_pool().await;
+        let pool = test_engine().await;
         {
             let counter = Arc::new(AtomicUsize::new(0));
             let s = Scheduled::new(pool).with(ScheduledTask::Daily(Box::new(
@@ -423,7 +424,7 @@ mod tests {
 
     #[actix_rt::test]
     async fn run_multiple() {
-        let pool = test_pool().await;
+        let pool = test_engine().await;
         {
             let counter1 = Arc::new(AtomicUsize::new(0));
             let counter2 = Arc::new(AtomicUsize::new(0));
@@ -446,7 +447,7 @@ mod tests {
 
     #[actix_rt::test]
     async fn run_concurrently() {
-        let pool = test_pool().await;
+        let pool = test_engine().await;
         {
             let counter = Arc::new(AtomicUsize::new(0));
             let s = Scheduled::new(pool).with(ScheduledTask::Daily(Box::new(
@@ -484,9 +485,9 @@ mod tests {
             self.0
         }
 
-        async fn run(
+        async fn run<'a>(
             &self,
-            _transaction: &mut db::Transaction,
+            _tx: &mut Tx<'a>,
             _timestamp: Timestamp,
         ) -> Result<(), Error> {
             self.1.fetch_add(1, Ordering::Relaxed);

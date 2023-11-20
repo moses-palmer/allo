@@ -43,13 +43,13 @@ macro_rules! value {
         }
 
         impl Type<Database> for $type {
-            fn type_info() -> <Database as ::sqlx::database::Database>::TypeInfo
-            {
+            fn type_info(
+            ) -> <Database as weru::database::sqlx::Database>::TypeInfo {
                 <$inner as Type<Database>>::type_info()
             }
 
             fn compatible(
-                ty: &<Database as ::sqlx::database::Database>::TypeInfo,
+                ty: &<Database as weru::database::sqlx::Database>::TypeInfo,
             ) -> bool {
                 <$inner as Type<Database>>::compatible(ty)
             }
@@ -82,8 +82,8 @@ macro_rules! value {
         }
 
         impl Type<Database> for $type {
-            fn type_info() -> <Database as ::sqlx::database::Database>::TypeInfo
-            {
+            fn type_info(
+            ) -> <Database as weru::database::sqlx::Database>::TypeInfo {
                 <$inner as Type<Database>>::type_info()
             }
         }
@@ -94,10 +94,10 @@ mod values {
     use std::error::Error;
 
     use crate::db::values::*;
-    use crate::db::Database;
-    use sqlx::database::{HasArguments, HasValueRef};
-    use sqlx::encode::IsNull;
-    use sqlx::{Decode, Encode, Type};
+    use weru::database::sqlx::database::{HasArguments, HasValueRef};
+    use weru::database::sqlx::encode::IsNull;
+    use weru::database::sqlx::{Decode, Encode, Type};
+    use weru::database::Database;
 
     value!(CurrencyFormat => String);
     value!(EmailAddress => String);

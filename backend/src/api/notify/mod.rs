@@ -1,17 +1,17 @@
-use std::sync::Arc;
+use crate::prelude::*;
 
-use actix::{Actor, AsyncContext, StreamHandler};
-use actix_session::Session;
-use actix_web::{web, HttpRequest, HttpResponse};
-use actix_web_actors::ws;
-use futures::stream::BoxStream;
+use weru::actix::session::Session;
+use weru::actix::web::{web, HttpRequest, HttpResponse};
+use weru::actix::web_actors::ws;
+use weru::actix::{Actor, AsyncContext, StreamHandler};
+use weru::channel::{Engine as ChannelEngine, Error};
+use weru::futures::stream::BoxStream;
+use weru::log;
 
 use crate::api;
 use crate::api::session::State;
-use crate::db;
 use crate::db::entities::User;
 use crate::db::values::{Role, UID};
-use crate::notifications::{Error, Notifications, Notifier};
 
 mod events;
 pub use self::events::Event;
@@ -38,23 +38,33 @@ impl Notify {
     /// error is then ignored.
     ///
     /// # Arguments
-    /// *  `conn` - A database connection.
-    /// *  `notifier` - The notifier to use.
+    /// *  `tx` - A database transaction.
+    /// *  `channel` - The channel engine.
     /// *  `from` - The user that initiated the event. This user will not be
     ///    notified.
-    pub async fn send<'b, E>(
+    pub async fn send<'a>(
         self,
-        conn: E,
-        notifier: &Notifier<Event>,
+        tx: &mut Tx<'a>,
+        channel: &ChannelEngine,
         from: &UID,
-    ) where
-        E: sqlx::Executor<'b, Database = db::Database>,
-    {
+    ) {
         let event = self.event();
-        for uid in self.users(conn, from).await {
-            let channel = uid.to_string();
-            if let Err(e) = notifier.send(&channel, event).await {
-                log::warn!("failed to send notification to {}: {}", channel, e);
+        for uid in self.users(tx, from).await {
+            let topic = uid.to_string();
+            let channel = match channel.channel(&topic).await {
+                Ok(channel) => channel,
+                Err(e) => {
+                    log::warn!(
+                        "failed to acquire notification channel for topic {}: \
+                        {}",
+                        topic,
+                        e,
+                    );
+                    return;
+                }
+            };
+            if let Err(e) = channel.broadcast(event.clone()).await {
+                log::warn!("failed to send notification to {}: {}", topic, e);
             }
         }
     }
@@ -76,30 +86,25 @@ impl Notify {
     /// error is then ignored. In this case, an empty list is returned.
     ///
     /// # Arguments
-    /// *  `conn` - A database connection.
-    /// *  `notifier` - The notifier to use.
+    /// *  `tx` - A database transaction.
     /// *  `from` - The user that initiated the event. This user will not be
     ///    included.
-    async fn users<'b, E>(&self, conn: E, from: &UID) -> Vec<UID>
-    where
-        E: sqlx::Executor<'b, Database = db::Database>,
-    {
+    async fn users<'a>(&self, tx: &mut Tx<'a>, from: &UID) -> Vec<UID> {
         use Notify::*;
         match self {
             Member { user, .. } => vec![user.clone()],
             Family { family, .. } => {
-                self.members(conn, family, |u| u.uid() != from).await
+                self.members(tx, family, |u| &u.uid != from).await
             }
             MemberAndParents { uid, family, .. } => {
-                self.members(conn, family, |u| {
-                    (u.uid() == uid || u.role() == &Role::Parent)
-                        && u.uid() != from
+                self.members(tx, family, |u| {
+                    (&u.uid == uid || u.role == Role::Parent) && &u.uid != from
                 })
                 .await
             }
             Parents { family, .. } => {
-                self.members(conn, family, |u| {
-                    u.role() == &Role::Parent && u.uid() != from
+                self.members(tx, family, |u| {
+                    u.role == Role::Parent && &u.uid != from
                 })
                 .await
             }
@@ -112,19 +117,19 @@ impl Notify {
     /// error is then ignored. In this case, an empty list is returned.
     ///
     ///# Arguments
-    /// *  `conn` - The database connection.
+    /// *  `tx` - The database transaction.
     /// *  `family_uid` - The unique ID of the family.
-    async fn members<'b, E, F>(
+    /// *  `predicae` - A filtering predicate.
+    async fn members<'a, P>(
         &self,
-        conn: E,
+        tx: &mut Tx<'a>,
         family_uid: &UID,
-        predicate: F,
+        predicate: P,
     ) -> Vec<UID>
     where
-        E: sqlx::Executor<'b, Database = db::Database>,
-        F: Fn(&User) -> bool,
+        P: Fn(&User) -> bool,
     {
-        User::read_for_family(conn, family_uid)
+        User::read_for_family(tx, family_uid)
             .await
             .unwrap_or_else(|e| {
                 log::warn!("failed to load family: {}", e);
@@ -133,7 +138,7 @@ impl Notify {
             .into_iter()
             .filter_map(|u| {
                 if predicate(&u) {
-                    Some(u.uid().clone())
+                    Some(u.uid.clone())
                 } else {
                     None
                 }
@@ -207,14 +212,14 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>>
 }
 
 pub async fn handle(
-    notifier: web::Data<Arc<Notifier<Event>>>,
+    channel: web::Data<ChannelEngine>,
     session: Session,
     req: HttpRequest,
     payload: web::Payload,
 ) -> Result<HttpResponse, actix_web::Error> {
     Ok(ws::start(
         NotificationSocket::new(
-            stream(&notifier, &State::load(&session)?.user_uid).await?,
+            stream(&channel, &State::load(&session)?.user_uid).await?,
         ),
         &req,
         payload,
@@ -224,42 +229,40 @@ pub async fn handle(
 /// Extracts a listening stream from a notifier for a given user.
 ///
 /// # Arguments
-/// *  `notifier` - The notifier.
+/// *  `channel` - The channel engine.
 /// *  `uid` - The user UID.
 async fn stream(
-    notifier: &Notifier<Event>,
+    channel: &ChannelEngine,
     uid: &UID,
 ) -> Result<BoxStream<'static, Result<Event, Error>>, api::Error> {
-    Ok(notifier.listen(&uid.to_string()).await?)
+    Ok(channel.channel(&uid.to_string()).await?.listen().await?)
 }
 
 #[cfg(test)]
 mod tests {
-    use actix::prelude::*;
+    use std::sync::mpsc;
 
-    use std::sync::mpsc::channel;
-
-    use actix_web::body::to_bytes;
-    use actix_web::test::TestRequest;
-    use futures::stream;
-
-    use crate::notifications::dummy::Notifier;
+    use weru::actix::web::body::to_bytes;
+    use weru::actix::web::test::TestRequest;
+    use weru::channel::engine::backends::local::Configuration;
+    use weru::futures::stream;
 
     use super::*;
 
     #[test]
     fn propagating() {
-        let (tx, rx) = channel();
+        let (tx, rx) = mpsc::channel();
 
         let sys = System::new();
         sys.block_on(async move {
-            let notifier = Notifier::new_with_events(vec![
-                Event::Ping {},
-                Event::Ping {},
-                Event::Ping {},
-            ]);
+            let engine =
+                ChannelConfiguration::Local(Configuration { queue_size: 16 })
+                    .engine()
+                    .await
+                    .unwrap();
+            let channel = engine.channel("test").await.unwrap();
             let socket =
-                NotificationSocket::new(notifier.listen("").await.unwrap());
+                NotificationSocket::new(channel.listen().await.unwrap());
             let resp = ws::start(
                 socket,
                 &TestRequest::get()
@@ -271,6 +274,10 @@ mod tests {
                 stream::pending(),
             )
             .unwrap();
+
+            channel.broadcast(Event::Ping {}).await.unwrap();
+            channel.broadcast(Event::Ping {}).await.unwrap();
+            channel.broadcast(Event::Ping {}).await.unwrap();
 
             if let Some(body) = to_bytes(resp.into_body()).await.ok() {
                 tx.send(Some(body)).unwrap();

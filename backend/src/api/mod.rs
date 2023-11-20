@@ -1,14 +1,16 @@
+use crate::prelude::*;
+
 use std::fmt;
 use std::sync::PoisonError;
 
-use actix_web::error::BlockingError;
-use actix_web::http::StatusCode;
-use actix_web::{HttpResponse, Responder, ResponseError};
 use serde::Serialize;
+use weru::actix::web::error::BlockingError;
+use weru::actix::web::http::StatusCode;
+use weru::actix::web::{HttpResponse, Responder, ResponseError};
+use weru::email::lettre::{message::Mailbox, Address};
+use weru::log;
 
-use crate::db;
-use crate::email;
-use crate::notifications;
+use crate::db::values::EmailAddress;
 
 pub mod family;
 pub mod invitation;
@@ -19,9 +21,6 @@ pub mod server;
 pub mod session;
 pub mod transaction;
 pub mod user;
-
-/// The database executor used by the API functions.
-pub type Executor<'a> = db::Transaction<'a>;
 
 /// A general grouping of errors returned by this API.
 #[derive(Debug, PartialEq)]
@@ -105,12 +104,19 @@ macro_rules! errors_for_driver {
     }
 }
 
-impl From<db::Error> for Error {
-    fn from(source: db::Error) -> Self {
+impl From<ChannelError> for Error {
+    fn from(source: ChannelError) -> Self {
+        log::error!("An unexpected notification error occurred: {}", source);
+        Error::Static(StatusCode::NOT_FOUND, "no notifications")
+    }
+}
+
+impl From<DatabaseError> for Error {
+    fn from(source: DatabaseError) -> Self {
         match source {
-            db::Error::Database(e) => {
+            DatabaseError::Database(e) => {
                 if let Some(code) = e.code() {
-                    errors_for_driver!(code for "db_sqlite" => {
+                    errors_for_driver!(code for "database-sqlite" => {
                         "2067" => CONFLICT: "entity exists"
                     })
                 } else {
@@ -131,15 +137,8 @@ impl From<db::Error> for Error {
     }
 }
 
-impl From<notifications::Error> for Error {
-    fn from(source: notifications::Error) -> Self {
-        log::error!("An unexpected notification error occurred: {}", source);
-        Error::Static(StatusCode::NOT_FOUND, "no notifications")
-    }
-}
-
-impl From<email::Error<email::driver::Error>> for Error {
-    fn from(source: email::Error<email::driver::Error>) -> Self {
+impl From<EMailError> for Error {
+    fn from(source: EMailError) -> Self {
         log::error!("An unexpected email error occurred: {}", source);
         Error::Static(StatusCode::INTERNAL_SERVER_ERROR, "fail to send email")
     }
@@ -175,9 +174,12 @@ pub fn expect<T>(a: Option<T>) -> Result<T, Error> {
 
 #[cfg(test)]
 pub mod tests {
+    use super::*;
+
     use std::time::Duration;
 
-    use crate::db;
+    use weru::database::Connection;
+
     use crate::db::entities::create;
     use crate::db::entities::{Family, Request, Transaction, User};
     use crate::db::values::{Role, Timestamp, TransactionType};
@@ -186,47 +188,47 @@ pub mod tests {
     /// children and transactions and requests.
     ///
     /// # Arguments
-    /// *  `c` - The database connection.
+    /// *  `conn` - The database connection.
     pub fn populate(
-        c: &mut db::Connection,
+        conn: &mut Connection,
     ) -> Result<
         (Family, User, (User, User), Vec<Transaction>, Vec<Request>),
-        db::Error,
+        DatabaseError,
     > {
-        let family = create::family(c, "Family Name");
+        let family = create::family(conn, "Family Name");
         let parent = create::user(
-            c,
+            conn,
             Role::Parent,
             "User Name",
             "test@email.com",
-            family.uid(),
+            &family.uid,
         );
         let children = (
             create::user(
-                c,
+                conn,
                 Role::Child,
                 "Child 1",
                 "child1@example.com",
-                family.uid(),
+                &family.uid,
             ),
             create::user(
-                c,
+                conn,
                 Role::Child,
                 "Child 2",
                 "child2@example.com",
-                family.uid(),
+                &family.uid,
             ),
         );
         let start = Timestamp::now();
         let transactions = (0..40)
             .map(|i| {
                 create::transaction(
-                    c,
+                    conn,
                     TransactionType::Gift,
                     if i & 1 != 0 {
-                        children.0.uid()
+                        &children.0.uid
                     } else {
-                        children.1.uid()
+                        &children.1.uid
                     },
                     &format!("description{}", i),
                     (i + 1) * 3,
@@ -246,11 +248,11 @@ pub mod tests {
         let requests = (0..10)
             .map(|i| {
                 create::request(
-                    c,
+                    conn,
                     if i & 1 != 0 {
-                        children.0.uid()
+                        &children.0.uid
                     } else {
-                        children.1.uid()
+                        &children.1.uid
                     },
                     &format!("name{}", i),
                     &format!("description{}", i),
@@ -262,4 +264,18 @@ pub mod tests {
 
         Ok((family, parent, children, transactions, requests))
     }
+}
+
+/// Creates a mailbox for a named user with an email address.
+///
+/// # Arguments
+/// *  `name` - The user name.
+/// *  `email` - The user email address. If this cannot be converted to a
+///    mailbox address, nothing is returned.
+pub fn mailbox(name: &str, email: &EmailAddress) -> Option<Mailbox> {
+    email
+        .to_string()
+        .parse::<Address>()
+        .ok()
+        .map(|address| Mailbox::new(Some(name.into()), address))
 }

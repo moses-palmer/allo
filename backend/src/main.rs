@@ -1,74 +1,62 @@
-use actix::prelude::*;
+use weru::actix::prelude::*;
 
 use std::env;
-use std::io;
+use std::error::Error;
 use std::process::exit;
-use std::sync::Arc;
 
-use actix_web::web::Data;
-use actix_web::{App, HttpServer};
-use env_logger;
+use weru::actix::web::web::Data;
+use weru::actix::web::{App, HttpServer};
+use weru::env_logger;
 
 #[macro_use]
 mod db;
 
 mod api;
 mod configuration;
-mod email;
-mod notifications;
 mod tasks;
 
-async fn run() -> io::Result<()> {
+mod prelude;
+
+async fn run() -> Result<(), Box<dyn Error>> {
     env_logger::builder().format_timestamp(None).init();
 
     let configuration = configuration::Configuration::load(
         &env::var("ALLO_CONFIGURATION_FILE")
-            .expect("ALLO_CONFIGURATION_FILE not set"),
-    )?;
+            .map_err(|_| "ALLO_CONFIGURATION_FILE not set".to_string())?,
+    )
+    .map_err(|e| format!("failed to load configuration: {}", e))?;
+
     let bind = configuration.server_bind();
-    let connection_pool = configuration
-        .connection_pool()
-        .await
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-    db::MIGRATOR
-        .run(&connection_pool)
-        .await
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-    let tasks_connection_pool = connection_pool.clone();
+
+    let session_store = configuration.session.store().await?;
+
+    let database = Data::new(configuration.database.engine().await?);
+    db::MIGRATOR.run(&mut database.connection().await?).await?;
+
+    let tasks_connection_pool = configuration.database.engine().await?;
     let _scheduler = Supervisor::start(|_| {
         tasks::Scheduled::new(tasks_connection_pool).with(
             tasks::ScheduledTask::Daily(Box::new(tasks::allowance::Payer)),
         )
     });
-    let server_configuration = Arc::new(configuration.clone());
-    let notifier = Arc::new(
-        configuration
-            .notifier::<api::notify::Event>()
-            .await
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?,
-    );
-    let email_sender = Arc::new(
-        configuration
-            .email_sender()
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?,
-    );
-    HttpServer::new(move || {
+
+    let channel = Data::new(configuration.channel.engine().await?);
+
+    let email = configuration.email.engine().await?;
+    let sender = Data::new(email.sender().await);
+
+    let defaults = Data::new(configuration.defaults());
+    let configuration = Data::new(configuration);
+
+    Ok(HttpServer::new(move || {
         App::new()
-            // Grant access to the server configuration
-            .app_data(Data::new(server_configuration.clone()))
-            // Grant access to the connection pool
-            .app_data(Data::new(connection_pool.clone()))
-            // Publish the default configuration
-            .app_data(Data::new(configuration.defaults()))
-            // Grant access to the notifier
-            .app_data(Data::new(notifier.clone()))
-            // Grant access to the email sender
-            .app_data(Data::new(email_sender.clone()))
-            // Persist session
-            .wrap(configuration.session())
-            // Register server information endpoint
+            .app_data(configuration.clone())
+            .app_data(database.clone())
+            .app_data(defaults.clone())
+            .app_data(channel.clone())
+            .app_data(sender.clone())
+            .wrap(session_store.clone().middleware(&configuration.session))
             .service(api::server::handle)
-            // Register API endpoints
             .service(api::family::add::handle)
             .service(api::family::register::handle)
             .service(api::family::remove::handle)
@@ -88,17 +76,19 @@ async fn run() -> io::Result<()> {
             .service(api::transaction::list::handle)
             .service(api::user::allowance::handle)
             .service(api::user::get::handle)
-            .route("/notify", actix_web::web::get().to(api::notify::handle))
+            .route(
+                "/notify",
+                weru::actix::web::web::get().to(api::notify::handle),
+            )
     })
     .bind(bind)
     .unwrap()
     .run()
-    .await
+    .await?)
 }
 
-#[actix_web::main]
+#[weru::main]
 async fn main() {
-    use std::error::Error;
     match run().await {
         Err(e) => {
             eprintln!("Failed to run: {}", e);

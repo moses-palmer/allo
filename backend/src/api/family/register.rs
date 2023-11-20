@@ -1,11 +1,7 @@
-use sqlx::prelude::*;
-
-use actix_web::{post, web, Responder};
-use serde::{Deserialize, Serialize};
+use crate::prelude::*;
 
 use crate::api;
-use crate::db;
-use crate::db::entities::{family, user, Entity, Family, Password, User};
+use crate::db::entities::{family, user, Family, Password, User};
 use crate::db::values::{PasswordHash, Role, UID};
 
 /// Registers a family with a main parent user.
@@ -14,10 +10,10 @@ use crate::db::values::{PasswordHash, Role, UID};
 /// with the user specified as parent exists.
 #[post("family")]
 pub async fn handle(
-    pool: web::Data<db::Pool>,
+    database: web::Data<DatabaseEngine>,
     req: web::Json<Req>,
 ) -> impl Responder {
-    let mut connection = pool.acquire().await?;
+    let mut connection = database.connection().await?;
     let mut trans = connection.begin().await?;
     {
         let res = execute(&mut trans, &req.into_inner()).await?;
@@ -27,28 +23,28 @@ pub async fn handle(
 }
 
 pub async fn execute<'a>(
-    e: &mut api::Executor<'a>,
+    tx: &mut Tx<'a>,
     req: &Req,
 ) -> Result<Res, api::Error> {
     let family = api::argument(req.family.clone().entity(UID::new()))?;
     let user = api::argument(
         req.user
             .clone()
-            .merge(user::Description {
-                family_uid: Some(family.uid().clone()),
+            .merge(user::UserDescription {
+                family_uid: Some(family.uid.clone()),
                 role: Some(Role::Parent),
                 ..Default::default()
             })
             .entity(UID::new()),
     )?;
     let password = Password::new(
-        user.uid().clone(),
+        user.uid.clone(),
         api::argument(PasswordHash::from_password(&req.password))?,
     );
 
-    family.create(&mut *e).await?;
-    user.create(&mut *e).await?;
-    password.create(&mut *e).await?;
+    family.create(tx.as_mut()).await?;
+    user.create(tx.as_mut()).await?;
+    password.create(tx.as_mut()).await?;
 
     Ok(Res { family, user })
 }
@@ -56,10 +52,10 @@ pub async fn execute<'a>(
 #[derive(Deserialize, Serialize)]
 pub struct Req {
     /// The family description.
-    pub family: family::Description,
+    pub family: family::FamilyDescription,
 
     /// The user description.
-    pub user: user::Description,
+    pub user: user::UserDescription,
 
     /// The user password.
     pub password: String,
@@ -77,43 +73,46 @@ pub struct Res {
 #[cfg(test)]
 mod tests {
     use crate::db::entities::{Family, User};
-    use crate::db::test_pool;
+    use crate::db::test_engine;
 
     use super::*;
 
     #[actix_rt::test]
     async fn success() {
-        let pool = test_pool().await;
-        let mut c = pool.acquire().await.unwrap();
+        let database = test_engine().await;
+        let mut conn = database.connection().await.unwrap();
 
-        let mut trans = c.begin().await.unwrap();
-        let res = execute(
-            &mut trans,
-            &Req {
-                family: family::Description {
-                    name: Some("family name".into()),
-                    ..Default::default()
+        let res = {
+            let mut tx = conn.begin().await.unwrap();
+            let r = execute(
+                &mut tx,
+                &Req {
+                    family: family::FamilyDescription {
+                        name: Some("family name".into()),
+                        ..Default::default()
+                    },
+                    user: user::UserDescription {
+                        name: Some("user name".into()),
+                        email: Some(None),
+                        ..Default::default()
+                    },
+                    password: "password".into(),
                 },
-                user: user::Description {
-                    name: Some("user name".into()),
-                    email: Some(None),
-                    ..Default::default()
-                },
-                password: "password".into(),
-            },
-        )
-        .await
-        .unwrap();
-        trans.commit().await.unwrap();
+            )
+            .await
+            .unwrap();
+            tx.commit().await.unwrap();
+            r
+        };
 
-        assert_eq!(res.family.name(), "family name");
-        assert_eq!(res.user.name(), "user name");
+        assert_eq!(res.family.name, "family name");
+        assert_eq!(res.user.name, "user name");
         assert_eq!(
-            Family::read(&mut c, res.family.uid()).await.unwrap(),
+            Family::read(conn.as_mut(), &res.family.uid).await.unwrap(),
             Some(res.family),
         );
         assert_eq!(
-            User::read(&mut c, res.user.uid()).await.unwrap(),
+            User::read(conn.as_mut(), &res.user.uid).await.unwrap(),
             Some(res.user),
         );
     }
