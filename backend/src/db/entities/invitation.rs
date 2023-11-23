@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-use weru::database::{entity, parameter};
+use weru::database::entity;
 
 use crate::db::entities::allowance::AllowanceDescription;
 use crate::db::entities::user::UserDescription;
@@ -37,13 +37,8 @@ pub struct Invitation {
 
 impl Invitation {
     /// The SQL statement used to load all members of a family.
-    const READ_BY_FAMILY: &'static str = concat!(
-        "SELECT uid, role, name, email, allowance_amount, allowance_schedule, \
-            time, family_uid \
-        FROM Invitations \
-        WHERE family_uid = ",
-        parameter!(1),
-    );
+    const READ_BY_FAMILY: &'static str =
+        sql_from_file!("Invitation.read-by-family");
 
     /// Loads all invitations for a family.
     ///

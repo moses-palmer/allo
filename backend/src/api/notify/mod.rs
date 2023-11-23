@@ -129,7 +129,7 @@ impl Notify {
     where
         P: Fn(&User) -> bool,
     {
-        User::read_for_family(tx, family_uid)
+        User::read_by_family(tx, family_uid)
             .await
             .unwrap_or_else(|e| {
                 log::warn!("failed to load family: {}", e);

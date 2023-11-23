@@ -47,7 +47,7 @@ pub async fn execute<'a>(
         api::argument(PasswordHash::from_password(&req.password))?,
     );
 
-    if User::read_for_family(tx, &invitation.family_uid)
+    if User::read_by_family(tx, &invitation.family_uid)
         .await?
         .iter()
         .any(|u| u.name == user.name)

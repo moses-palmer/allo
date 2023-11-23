@@ -3,7 +3,7 @@ use crate::prelude::*;
 use std::ops::Range;
 
 use either::Either;
-use weru::database::{entity, parameter};
+use weru::database::entity;
 use weru::futures::StreamExt;
 
 use crate::db::values::{Timestamp, TransactionType, UID};
@@ -36,43 +36,15 @@ pub struct Transaction {
 
 impl Transaction {
     /// The SQL statement used to create a transaction with an automatic UID.
-    const CREATE_WITH_AUTO_UID: &'static str = concat!(
-        "INSERT INTO Transactions (transaction_type, user_uid, description, \
-            amount, time) \
-        VALUES (",
-        parameter!(1),
-        ", ",
-        parameter!(2),
-        ", ",
-        parameter!(3),
-        ", ",
-        parameter!(4),
-        ", ",
-        parameter!(5),
-        "); ",
-        last_row_id!(),
-    );
+    const CREATE_WITH_AUTO_UID: &'static str =
+        sql_from_file!("Transaction.create-with-auth-id");
 
     /// The SQL statement used to load transactions for a user.
     const READ_FOR_USER_LIMIT: &'static str =
-        concat!(
-        "SELECT uid, transaction_type, user_uid, description, amount, time \
-        FROM Transactions \
-        WHERE user_uid = ",
-        parameter!(1), " ",
-        "ORDER BY time DESC \
-        LIMIT ", parameter!(2), " \
-        OFFSET ", parameter!(3),
-
-    );
+        sql_from_file!("Transaction.read-for-user-limit");
 
     /// The SQL statement used to load the balace for a user.
-    const BALANCE: &'static str = concat!(
-        "SELECT SUM(amount) \
-        FROM Transactions \
-        WHERE user_uid = ",
-        parameter!(1),
-    );
+    const BALANCE: &'static str = sql_from_file!("Transaction.balance");
 
     /// Creates a transaction in the database, delegating selection of UID.
     ///

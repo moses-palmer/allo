@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use weru::async_trait::async_trait;
 use weru::database::sqlx::Acquire;
-use weru::database::{parameter, sqlx, Connection};
+use weru::database::{sqlx, Connection};
 use weru::futures::executor::block_on;
 use weru::log;
 
@@ -70,29 +70,10 @@ pub struct MultipleErrors(pub Vec<Error>);
 impl Scheduled {
     /// The SQL used to check whether a scheduled task has run for a specific
     /// timestamp.
-    const CHECK: &'static str = concat!(
-        "\
-        SELECT last_run \
-        FROM ScheduledTasks \
-        WHERE task = ",
-        parameter!(1),
-        " ",
-        "AND last_run = ",
-        parameter!(2),
-    );
+    const CHECK: &'static str = sql_from_file!("Scheduled.check");
 
     /// The SQL used to update the last run timestamp of a scheduled task.
-    const UPDATE: &'static str = concat!(
-        "\
-        INSERT INTO ScheduledTasks (task, last_run, time)
-        VALUES (",
-        parameter!(1),
-        ", ",
-        parameter!(2),
-        ", ",
-        parameter!(3),
-        ")",
-    );
+    const UPDATE: &'static str = sql_from_file!("Scheduled.update");
 
     /// Creates a new scheduled task runner.
     ///

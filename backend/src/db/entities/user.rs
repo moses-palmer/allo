@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-use weru::database::{entity, parameter, sqlx};
+use weru::database::{entity, sqlx};
 
 use crate::db::values::{EmailAddress, Role, UID};
 
@@ -26,19 +26,14 @@ pub struct User {
 
 impl User {
     /// The SQL statement used to load all members of a family.
-    const READ_BY_FAMILY: &'static str = concat!(
-        "SELECT uid, role, name, email, family_uid \
-        FROM Users \
-        WHERE family_uid = ",
-        parameter!(1),
-    );
+    const READ_BY_FAMILY: &'static str = sql_from_file!("User.read-by-family");
 
     /// Loads all members of a family.
     ///
     /// # Arguments
     /// *  `tx` - The database transaction.
     /// *  `family_uid` - The family UID.
-    pub async fn read_for_family<'a>(
+    pub async fn read_by_family<'a>(
         tx: &mut Tx<'a>,
         family_uid: &UID,
     ) -> Result<Vec<Self>, DatabaseError> {
@@ -81,7 +76,7 @@ mod impl_tests {
     use super::*;
 
     #[actix_rt::test]
-    async fn read_for_family() {
+    async fn read_by_family() {
         let database = test_engine().await;
         let mut conn = database.connection().await.unwrap();
 
@@ -110,7 +105,7 @@ mod impl_tests {
         );
         let mut tx = conn.begin().await.unwrap();
 
-        let users = User::read_for_family(&mut tx, &user1.family_uid)
+        let users = User::read_by_family(&mut tx, &user1.family_uid)
             .await
             .unwrap();
         assert_eq!(users.len(), 2);

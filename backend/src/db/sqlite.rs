@@ -5,10 +5,9 @@ use weru::database::{Configuration, Engine};
 pub const MIGRATOR: weru::database::sqlx::migrate::Migrator =
     weru::database::sqlx::migrate!("src/db/migrations/sqlite/");
 
-/// The last inserted row ID.
-macro_rules! last_row_id {
-    () => {
-        "SELECT last_insert_rowid()"
+macro_rules! sql_from_file {
+    ($name:expr) => {
+        include_str!(concat!($name, ".sqlite.sql"))
     };
 }
 

@@ -47,7 +47,7 @@ pub async fn execute<'a>(
         .await?
         .unwrap_or(defaults);
     let family = api::expect(Family::read(tx.as_mut(), family_uid).await?)?;
-    let members = User::read_for_family(tx, &family_uid).await?;
+    let members = User::read_by_family(tx, &family_uid).await?;
     let invitations = Invitation::read_for_family(tx, family_uid).await?;
     let requests = match role {
         Role::Parent => Request::read_for_family(tx, family_uid).await?,

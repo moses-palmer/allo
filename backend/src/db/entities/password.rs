@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-use weru::database::{entity, parameter};
+use weru::database::entity;
 
 use crate::db::values::{EmailAddress, PasswordHash, UID};
 
@@ -17,14 +17,8 @@ pub struct Password {
 
 impl Password {
     /// The SQL statement used to load a password hash by user email address.
-    const READ_BY_EMAIL: &'static str = concat!(
-        "SELECT user_uid, hash \
-        FROM Passwords \
-        LEFT JOIN Users \
-            ON Passwords.user_uid = Users.uid \
-        WHERE Users.email = ",
-        parameter!(1)
-    );
+    const READ_BY_EMAIL: &'static str =
+        sql_from_file!("Password.read-by-email");
 
     /// Loads a password using the email address of the associated user.
     ///

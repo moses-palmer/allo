@@ -94,7 +94,7 @@ pub async fn execute<'a>(
         .entity(UID::new()),
     )?;
 
-    if User::read_for_family(&mut *tx, &state.family_uid)
+    if User::read_by_family(&mut *tx, &state.family_uid)
         .await?
         .iter()
         .any(|u| u.name == invitation.name)

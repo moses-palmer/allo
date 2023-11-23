@@ -1,7 +1,7 @@
 use crate::prelude::*;
 
 use either::Either;
-use weru::database::{entity, parameter};
+use weru::database::entity;
 use weru::futures::StreamExt;
 
 use crate::db::values::{Timestamp, UID, URL};
@@ -37,43 +37,15 @@ pub struct Request {
 
 impl Request {
     /// The SQL statement used to create a transaction with an automatic UID.
-    const CREATE_WITH_AUTO_UID: &'static str = concat!(
-        "INSERT INTO Requests (user_uid, name, description, amount, url, time) \
-        VALUES (",
-        parameter!(1),
-        ", ",
-        parameter!(2),
-        ", ",
-        parameter!(3),
-        ", ",
-        parameter!(4),
-        ", ",
-        parameter!(5),
-        ", ",
-        parameter!(6),
-        "); ",
-        last_row_id!(),
-    );
+    const CREATE_WITH_AUTO_UID: &'static str =
+        sql_from_file!("Request.create-with-auto-id");
 
     /// The SQL statement used to load all requests from a user.
-    const READ_FOR_USER: &'static str = concat!(
-        "SELECT Requests.uid, user_uid, Requests.name, description, amount, \
-            url, time \
-        FROM Requests \
-        WHERE user_uid = ",
-        parameter!(1),
-    );
+    const READ_FOR_USER: &'static str = sql_from_file!("Request.read-for-user");
 
     /// The SQL statement used to load all requests from members of a family.
-    const READ_FOR_FAMILY: &'static str = concat!(
-        "SELECT Requests.uid, user_uid, Requests.name, description, amount, \
-            url, time \
-        FROM Requests \
-        LEFT JOIN Users \
-            ON Requests.user_uid = Users.uid \
-        WHERE Users.family_uid = ",
-        parameter!(1),
-    );
+    const READ_FOR_FAMILY: &'static str =
+        sql_from_file!("Request.read-for-family");
 
     /// Creates a transaction in the database, delegating selection of UID.
     ///

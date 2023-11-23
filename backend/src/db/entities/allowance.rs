@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-use weru::database::{entity, parameter};
+use weru::database::entity;
 
 use crate::db::values::{Schedule, UID};
 
@@ -23,12 +23,8 @@ pub struct Allowance {
 
 impl Allowance {
     /// The SQL statement used to load all allowances from a user.
-    const READ_FOR_USER: &'static str = concat!(
-        "SELECT uid, user_uid, amount, schedule \
-        FROM Allowances \
-        WHERE user_uid = ",
-        parameter!(1),
-    );
+    const READ_FOR_USER: &'static str =
+        sql_from_file!("Allowance.read-for-user");
 
     /// Loads all allowances for a user.
     ///

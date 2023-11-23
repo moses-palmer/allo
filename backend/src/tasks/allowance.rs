@@ -5,18 +5,14 @@ use weru::async_trait::async_trait;
 
 use crate::db;
 
-pub struct Payer;
+pub struct AllowancePayer;
 
-#[cfg(feature = "database-sqlite")]
-const SQL: &'static str = "\
-    INSERT INTO Transactions (transaction_type, user_uid, description, \
-            amount, time)
-        SELECT ?, user_uid, '', amount, ? \
-        FROM Allowances
-        WHERE schedule = ?";
+impl AllowancePayer {
+    const PAY: &'static str = sql_from_file!("Allowance.pay");
+}
 
 #[async_trait]
-impl super::Task for Payer {
+impl super::Task for AllowancePayer {
     fn name(&self) -> &'static str {
         "allowance-payer"
     }
@@ -26,7 +22,7 @@ impl super::Task for Payer {
         tx: &mut Tx<'a>,
         timestamp: db::values::Timestamp,
     ) -> Result<(), super::Error> {
-        Ok(sqlx::query(SQL)
+        Ok(sqlx::query(Self::PAY)
             .bind(db::values::TransactionType::Allowance)
             .bind(timestamp)
             .bind(db::values::Schedule::from(timestamp.0.weekday()))
@@ -51,7 +47,7 @@ mod tests {
     #[actix_rt::test]
     async fn run_simple() {
         let database = test_engine().await;
-        let payer = Payer;
+        let payer = AllowancePayer;
         let thursday =
             DateTime::parse_from_rfc3339("1970-01-01T01:00:00Z").unwrap();
         let friday =

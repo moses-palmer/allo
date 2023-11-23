@@ -63,7 +63,7 @@ pub async fn execute<'a>(
             "a parent cannot have an allowance",
         ));
     }
-    if User::read_for_family(tx, &family_uid)
+    if User::read_by_family(tx, &family_uid)
         .await?
         .iter()
         .any(|u| u.name == user.name)

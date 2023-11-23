@@ -36,7 +36,9 @@ async fn run() -> Result<(), Box<dyn Error>> {
     let tasks_connection_pool = configuration.database.engine().await?;
     let _scheduler = Supervisor::start(|_| {
         tasks::Scheduled::new(tasks_connection_pool).with(
-            tasks::ScheduledTask::Daily(Box::new(tasks::allowance::Payer)),
+            tasks::ScheduledTask::Daily(Box::new(
+                tasks::allowance::AllowancePayer,
+            )),
         )
     });
 
