@@ -1,15 +1,19 @@
+use crate::prelude::*;
+
+use weru::database::entity;
+
 use crate::db::values::UID;
 
-entity!(
-    /// A description of a supported currency.
-    pub struct Family in Families {
-        /// The unique identifier.
-        uid: UID,
+/// A description of a supported currency.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[entity(Families)]
+pub struct Family {
+    /// The unique identifier.
+    pub uid: UID,
 
-        /// The family name.
-        name: String,
-    }
-);
+    /// The family name.
+    pub name: String,
+}
 
 entity_tests! {
     Family[UID = UID::new()] {

@@ -10,40 +10,19 @@ tiny-skia = "0.8"
 usvg = "0.29"
 
 [dependencies]
-actix = "0.13"
-actix-http = "3.3"
-actix-rt = "2.8"
-actix-session = "0.7"
-actix-web = "4.3"
-actix-web-actors = "4.2"
-async-trait = "*"
+actix = "*"
+actix-rt = "*"
+actix-web = "*"
 bcrypt = "0.14"
 chrono = "0.4"
 either = "1.8"
 email_address = "0.2"
-env_logger = "0.10"
-futures = "0.3"
 futures-util = "0.3"
-log = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-toml = "0.7"
+sqlx = "*"
 url = "2.3"
 uuid = { version = "1.3", features = ["v4"] }
-
-[dependencies.lettre]
-default-features = false
-version = "0.10"
-features = ["builder", "serde", "tokio1", "tokio1-native-tls"]
-
-[dependencies.libsqlite3-sys]
-version  ="*"
-optional = true
-features= ["bundled"]
-
-[dependencies.pulldown-cmark]
-default-features = false
-version = "0.9"
 
 [dependencies.redis]
 version = "0.22"
@@ -58,14 +37,15 @@ optional = true
 version = "1.0"
 optional = true
 
-[dependencies.sqlx]
-version = "0.6"
-features = ["chrono", "migrate", "runtime-actix-rustls"]
+[dependencies.weru]
+git = "https://github.com/moses-palmer/weru"
+tag = "v0.1.0"
 
 [features]
-default = ["db_sqlite", "email_smtp", "notify_redis", "session_redis"]
-db_sqlite = ["libsqlite3-sys", "sqlx/sqlite"]
-email_smtp = ["lettre/smtp-transport", "lettre/tokio1-rustls-tls"]
-notify_redis = ["redis", "serde_cbor", "serial_test"]
-session_cookie = ["actix-session/cookie-session"]
-session_redis = ["actix-session/redis-actor-session"]
+default = ["channel-redis", "database-sqlite", "email-smtp", "session-redis"]
+channel-redis = ["weru/channel-redis"]
+database-sqlite = ["weru/database-sqlite"]
+email-drop = ["weru/email-drop"]
+email-smtp = ["weru/email-smtp"]
+session-cookie = ["weru/session-cookie"]
+session-redis = ["weru/session-redis"]

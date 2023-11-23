@@ -1,46 +1,43 @@
+use crate::prelude::*;
+
+use weru::database::entity;
+
 use crate::db::values::{Schedule, UID};
 
-entity!(
-    /// The allowance for a user.
-    pub struct Allowance in Allowances {
-        /// The unique identifier.
-        uid: UID,
+/// The allowance for a user.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[entity(Allowances)]
+pub struct Allowance {
+    /// The unique identifier.
+    pub uid: UID,
 
-        /// The user receiving this allowance.
-        user_uid: UID,
+    /// The user receiving this allowance.
+    pub user_uid: UID,
 
-        /// The amount.
-        amount: u32,
+    /// The amount.
+    pub amount: u32,
 
-        /// The schedule of the allowance.
-        schedule: Schedule,
-    }
-);
+    /// The schedule of the allowance.
+    pub schedule: Schedule,
+}
 
 impl Allowance {
     /// The SQL statement used to load all allowances from a user.
-    const READ_FOR_USER: &'static str = concat!(
-        "SELECT uid, user_uid, amount, schedule \
-        FROM Allowances \
-        WHERE user_uid = ",
-        parameter!(user_uid),
-    );
+    const READ_FOR_USER: &'static str =
+        sql_from_file!("Allowance.read-for-user");
 
     /// Loads all allowances for a user.
     ///
     /// # Arguments
-    /// *  `e` - The database executor.
+    /// *  `tx` - The database transaction.
     /// *  `user_uid` - The user UID.
-    pub async fn read_for_user<'a, E>(
-        e: E,
+    pub async fn read_for_user<'a>(
+        tx: &mut Tx<'a>,
         user_uid: &UID,
-    ) -> Result<Vec<Self>, crate::db::Error>
-    where
-        E: ::sqlx::Executor<'a, Database = crate::db::Database>,
-    {
+    ) -> Result<Vec<Self>, DatabaseError> {
         sqlx::query_as(Self::READ_FOR_USER)
             .bind(user_uid)
-            .fetch_all(e)
+            .fetch_all(tx.as_mut())
             .await
     }
 }
@@ -57,12 +54,12 @@ entity_tests! {
             schedule: "tue".parse::<Schedule>().unwrap(),
             ..e
         };
-        prepare: |c, e| {
+        prepare: |tx, e| {
             let u = crate::db::entities::user::tests::entity_with_id(
-                e.user_uid().clone(),
+                e.user_uid.clone(),
             );
-            crate::db::entities::user::tests::prepare(c, &u).await?;
-            u.create(c).await
+            crate::db::entities::user::tests::prepare(tx, &u).await?;
+            u.create(tx.as_mut()).await
         };
     }
 }
@@ -72,53 +69,51 @@ mod impl_tests {
     use actix_rt;
 
     use crate::db::entities::create;
-    use crate::db::test_pool;
+    use crate::db::test_engine;
     use crate::db::values::Role;
 
     use super::*;
 
     #[actix_rt::test]
     async fn read_for_user() {
-        let pool = test_pool().await;
-        {
-            let mut c = pool.acquire().await.unwrap();
+        let database = test_engine().await;
+        let mut conn = database.connection().await.unwrap();
+        let family = create::family(&mut conn, "Family");
+        let user1 = create::user(
+            &mut conn,
+            Role::Parent,
+            "User 1",
+            "test1@example.com",
+            &family.uid,
+        );
+        let user2 = create::user(
+            &mut conn,
+            Role::Parent,
+            "User 2",
+            "test2@example.com",
+            &family.uid,
+        );
+        let allowance1 = create::allowance(
+            &mut conn,
+            &user1.uid,
+            42,
+            "mon".parse().unwrap(),
+        );
+        let allowance2 = create::allowance(
+            &mut conn,
+            &user1.uid,
+            43,
+            "tue".parse().unwrap(),
+        );
+        create::allowance(&mut conn, &user2.uid, 44, "wed".parse().unwrap());
+        let mut tx = conn.begin().await.unwrap();
 
-            let family = create::family(&mut c, "Family");
-            let user1 = create::user(
-                &mut c,
-                Role::Parent,
-                "User 1",
-                "test1@example.com",
-                family.uid(),
-            );
-            let user2 = create::user(
-                &mut c,
-                Role::Parent,
-                "User 2",
-                "test2@example.com",
-                family.uid(),
-            );
-            let allowance1 = create::allowance(
-                &mut c,
-                user1.uid(),
-                42,
-                "mon".parse().unwrap(),
-            );
-            let allowance2 = create::allowance(
-                &mut c,
-                user1.uid(),
-                43,
-                "tue".parse().unwrap(),
-            );
-            create::allowance(&mut c, user2.uid(), 44, "wed".parse().unwrap());
-
-            let allowances =
-                Allowance::read_for_user(&mut c, allowance1.user_uid())
-                    .await
-                    .unwrap();
-            assert_eq!(allowances.len(), 2);
-            assert!(allowances.contains(&allowance1));
-            assert!(allowances.contains(&allowance2));
-        }
+        let allowances =
+            Allowance::read_for_user(&mut tx, &allowance1.user_uid)
+                .await
+                .unwrap();
+        assert_eq!(allowances.len(), 2);
+        assert!(allowances.contains(&allowance1));
+        assert!(allowances.contains(&allowance2));
     }
 }

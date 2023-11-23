@@ -1,22 +1,13 @@
-use sqlx::prelude::*;
+use crate::prelude::*;
 
-use std::sync::Arc;
-
-use actix_session::Session;
-use actix_web::http::StatusCode;
-use actix_web::{post, web, Responder};
-use serde::{Deserialize, Serialize};
+use weru::email::{template::Language, Sender};
 
 use crate::api;
 use crate::api::notify::{Event, Notify};
 use crate::api::session::State;
 use crate::configuration::Configuration;
-use crate::db;
-use crate::db::entities::{invitation, Entity, Family, Invitation, User};
+use crate::db::entities::{invitation, Family, Invitation, User};
 use crate::db::values::{Role, Timestamp, UID};
-use crate::email::template::Language;
-use crate::email::{mailbox, Sender, Transport};
-use crate::notifications::Notifier;
 
 /// The name of the template used for invitations.
 const TEMPLATE: &'static str = &"invitation";
@@ -26,42 +17,42 @@ const TEMPLATE: &'static str = &"invitation";
 /// This action is used to add both parents and children.
 #[post("invitation")]
 pub async fn handle(
-    pool: web::Data<db::Pool>,
-    notifier: web::Data<Arc<Notifier<Event>>>,
-    email_sender: web::Data<Arc<Sender<Transport>>>,
-    server_configuration: web::Data<Arc<Configuration>>,
+    engine: web::Data<DatabaseEngine>,
+    channel: web::Data<ChannelEngine>,
+    email_sender: web::Data<Box<dyn Sender>>,
+    server_configuration: web::Data<Configuration>,
     session: Session,
     req: web::Json<Req>,
 ) -> impl Responder {
-    let mut connection = pool.acquire().await?;
-    let mut trans = connection.begin().await?;
+    let mut conn = engine.connection().await?;
+    let mut tx = conn.begin().await?;
     let state = State::load(&session)?;
     {
-        let language = req.language.clone();
-        let res = execute(&mut trans, state.clone(), &req.into_inner()).await?;
+        let languages = req.language.iter().cloned().collect::<Vec<_>>();
+        let res = execute(&mut tx, state.clone(), &req.into_inner()).await?;
         let family = api::expect(
-            Family::read(&mut trans, res.invitation.family_uid()).await?,
+            Family::read(tx.as_mut(), &res.invitation.family_uid).await?,
         )?;
-        let invitation_uid = res.invitation.uid().to_string();
+        let invitation_uid = res.invitation.uid.to_string();
         email_sender
             .send(
-                api::argument(mailbox(
-                    res.invitation.name(),
-                    res.invitation.email(),
-                ))?,
-                vec![
-                    language.unwrap_or_else(|| {
-                        server_configuration.email.default_language.clone()
-                    }),
-                    server_configuration.email.default_language.clone(),
-                ],
+                api::argument(api::mailbox(
+                    &res.invitation.name,
+                    &res.invitation.email,
+                ))?
+                .into(),
+                &languages,
                 &TEMPLATE.into(),
-                |key| match key {
-                    "family.name" => Some(family.name()),
-                    "invitation.uid" => Some(&invitation_uid),
-                    "server.url" => Some(&server_configuration.server.url),
-                    _ => None,
-                },
+                &[
+                    (String::from("family.name"), family.name.clone()),
+                    (String::from("invitation.uid"), invitation_uid.clone()),
+                    (
+                        String::from("server.url"),
+                        server_configuration.server.url.clone(),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
             )
             .await?;
         Notify::Family {
@@ -71,22 +62,22 @@ pub async fn handle(
             },
             family: state.family_uid,
         }
-        .send(&mut *trans, &notifier, &state.user_uid)
+        .send(&mut tx, &channel, &state.user_uid)
         .await;
-        trans.commit().await?;
+        tx.commit().await?;
         api::ok(res)
     }
 }
 
 pub async fn execute<'a>(
-    trans: &mut db::Transaction<'a>,
+    tx: &mut Tx<'a>,
     state: State,
     req: &Req,
 ) -> Result<Res, api::Error> {
     let state = state.assert_role(Role::Parent)?;
     let invitation = api::argument(
         if req.user.role == Some(Role::Parent) {
-            req.user.clone().merge(invitation::Description {
+            req.user.clone().merge(invitation::InvitationDescription {
                 time: Some(Timestamp::now()),
                 family_uid: Some(state.family_uid.clone()),
                 allowance_amount: Some(None),
@@ -94,7 +85,7 @@ pub async fn execute<'a>(
                 ..Default::default()
             })
         } else {
-            req.user.clone().merge(invitation::Description {
+            req.user.clone().merge(invitation::InvitationDescription {
                 time: Some(Timestamp::now()),
                 family_uid: Some(state.family_uid.clone()),
                 ..Default::default()
@@ -103,10 +94,10 @@ pub async fn execute<'a>(
         .entity(UID::new()),
     )?;
 
-    if User::read_for_family(&mut *trans, &state.family_uid)
+    if User::read_by_family(&mut *tx, &state.family_uid)
         .await?
         .iter()
-        .any(|u| u.name() == invitation.name())
+        .any(|u| u.name == invitation.name)
     {
         return Err(api::Error::Static(
             StatusCode::CONFLICT,
@@ -114,7 +105,7 @@ pub async fn execute<'a>(
         ));
     }
 
-    invitation.create(&mut *trans).await?;
+    invitation.create(tx.as_mut()).await?;
 
     Ok(Res { invitation })
 }
@@ -122,7 +113,7 @@ pub async fn execute<'a>(
 #[derive(Deserialize, Serialize)]
 pub struct Req {
     /// The invitation.
-    pub user: invitation::Description,
+    pub user: invitation::InvitationDescription,
 
     /// The language to use for the invitation email.
     pub language: Option<Language>,
@@ -138,125 +129,131 @@ pub struct Res {
 mod tests {
     use crate::api::tests;
     use crate::db::entities::invitation;
-    use crate::db::test_pool;
+    use crate::db::test_engine;
 
     use super::*;
 
     #[actix_rt::test]
     async fn success_child() {
-        let pool = test_pool().await;
-        let mut c = pool.acquire().await.unwrap();
-        let (family, parent, _, _, _) = tests::populate(&mut c).unwrap();
+        let database = test_engine().await;
+        let mut conn = database.connection().await.unwrap();
+        let (family, parent, _, _, _) = tests::populate(&mut conn).unwrap();
 
-        let mut trans = c.begin().await.unwrap();
-        let res = execute(
-            &mut trans,
-            State {
-                user_uid: parent.uid().clone(),
-                family_uid: family.uid().clone(),
-                role: parent.role().clone(),
-            },
-            &Req {
-                user: invitation::Description {
-                    role: Some(Role::Child),
-                    name: Some("child".into()),
-                    email: Some("new@test.com".parse().unwrap()),
-                    allowance_amount: Some(Some(42)),
-                    allowance_schedule: Some(Some("mon".parse().unwrap())),
-                    ..Default::default()
+        let res = {
+            let mut tx = conn.begin().await.unwrap();
+            let r = execute(
+                &mut tx,
+                State {
+                    user_uid: parent.uid.clone(),
+                    family_uid: family.uid.clone(),
+                    role: parent.role.clone(),
                 },
-                language: None,
-            },
-        )
-        .await
-        .unwrap();
-        trans.commit().await.unwrap();
+                &Req {
+                    user: invitation::InvitationDescription {
+                        role: Some(Role::Child),
+                        name: Some("child".into()),
+                        email: Some("new@test.com".parse().unwrap()),
+                        allowance_amount: Some(Some(42)),
+                        allowance_schedule: Some(Some("mon".parse().unwrap())),
+                        ..Default::default()
+                    },
+                    language: None,
+                },
+            )
+            .await
+            .unwrap();
+            tx.commit().await.unwrap();
+            r
+        };
 
-        let invitation = Invitation::read(&mut c, res.invitation.uid())
+        let invitation = Invitation::read(conn.as_mut(), &res.invitation.uid)
             .await
             .unwrap()
             .unwrap();
         assert_eq!(invitation, res.invitation);
-        assert_eq!(invitation.role(), &Role::Child);
-        assert_eq!(invitation.name(), "child");
-        assert_eq!(invitation.email(), &"new@test.com".parse().unwrap());
-        assert_eq!(invitation.allowance_amount(), &Some(42));
-        assert_eq!(
-            invitation.allowance_schedule(),
-            &Some("mon".parse().unwrap())
-        );
+        assert_eq!(invitation.role, Role::Child);
+        assert_eq!(invitation.name, "child");
+        assert_eq!(invitation.email, "new@test.com".parse().unwrap());
+        assert_eq!(invitation.allowance_amount, Some(42));
+        assert_eq!(invitation.allowance_schedule, Some("mon".parse().unwrap()));
     }
 
     #[actix_rt::test]
     async fn success_parent() {
-        let pool = test_pool().await;
-        let mut c = pool.acquire().await.unwrap();
-        let (family, parent, _, _, _) = tests::populate(&mut c).unwrap();
+        let database = test_engine().await;
+        let mut conn = database.connection().await.unwrap();
+        let (family, parent, _, _, _) = tests::populate(&mut conn).unwrap();
 
-        let mut trans = c.begin().await.unwrap();
-        let res = execute(
-            &mut trans,
-            State {
-                user_uid: parent.uid().clone(),
-                family_uid: family.uid().clone(),
-                role: parent.role().clone(),
-            },
-            &Req {
-                user: invitation::Description {
-                    role: Some(Role::Parent),
-                    name: Some("parent".into()),
-                    email: Some("new@test.com".parse().unwrap()),
-                    ..Default::default()
+        let res = {
+            let mut tx = conn.begin().await.unwrap();
+            let r = execute(
+                &mut tx,
+                State {
+                    user_uid: parent.uid.clone(),
+                    family_uid: family.uid.clone(),
+                    role: parent.role.clone(),
                 },
-                language: None,
-            },
-        )
-        .await
-        .unwrap();
-        trans.commit().await.unwrap();
+                &Req {
+                    user: invitation::InvitationDescription {
+                        role: Some(Role::Parent),
+                        name: Some("parent".into()),
+                        email: Some("new@test.com".parse().unwrap()),
+                        ..Default::default()
+                    },
+                    language: None,
+                },
+            )
+            .await
+            .unwrap();
+            tx.commit().await.unwrap();
+            r
+        };
 
-        let invitation = Invitation::read(&mut c, res.invitation.uid())
+        let invitation = Invitation::read(conn.as_mut(), &res.invitation.uid)
             .await
             .unwrap()
             .unwrap();
         assert_eq!(invitation, res.invitation);
-        assert_eq!(invitation.role(), &Role::Parent);
-        assert_eq!(invitation.name(), "parent");
-        assert_eq!(invitation.email(), &"new@test.com".parse().unwrap());
-        assert_eq!(invitation.allowance_amount(), &None);
-        assert_eq!(invitation.allowance_schedule(), &None,);
+        assert_eq!(invitation.role, Role::Parent);
+        assert_eq!(invitation.name, "parent");
+        assert_eq!(invitation.email, "new@test.com".parse().unwrap());
+        assert_eq!(invitation.allowance_amount, None);
+        assert_eq!(invitation.allowance_schedule, None);
     }
 
     #[actix_rt::test]
     async fn forbidden_child() {
-        let pool = test_pool().await;
-        let mut c = pool.acquire().await.unwrap();
-        let (family, _, children, _, _) = tests::populate(&mut c).unwrap();
+        let database = test_engine().await;
+        let mut conn = database.connection().await.unwrap();
+        let (family, _, children, _, _) = tests::populate(&mut conn).unwrap();
 
-        let mut trans = c.begin().await.unwrap();
-        let err = execute(
-            &mut trans,
-            State {
-                user_uid: children.0.uid().clone(),
-                family_uid: family.uid().clone(),
-                role: children.0.role().clone(),
-            },
-            &Req {
-                user: invitation::Description {
-                    role: Some(Role::Child),
-                    name: Some("child".into()),
-                    email: Some("new@test.com".parse().unwrap()),
-                    allowance_amount: Some(Some(42)),
-                    allowance_schedule: Some(Some("mon".parse().unwrap())),
-                    ..Default::default()
+        let err = {
+            let mut tx = conn.begin().await.unwrap();
+            let r = execute(
+                &mut tx,
+                State {
+                    user_uid: children.0.uid.clone(),
+                    family_uid: family.uid.clone(),
+                    role: children.0.role.clone(),
                 },
-                language: None,
-            },
-        )
-        .await
-        .err()
-        .unwrap();
-        trans.commit().await.unwrap();
+                &Req {
+                    user: invitation::InvitationDescription {
+                        role: Some(Role::Child),
+                        name: Some("child".into()),
+                        email: Some("new@test.com".parse().unwrap()),
+                        allowance_amount: Some(Some(42)),
+                        allowance_schedule: Some(Some("mon".parse().unwrap())),
+                        ..Default::default()
+                    },
+                    language: None,
+                },
+            )
+            .await
+            .err()
+            .unwrap();
+            tx.commit().await.unwrap();
+            r
+        };
 
         assert_eq!(err, api::Error::forbidden("invalid role"));
     }

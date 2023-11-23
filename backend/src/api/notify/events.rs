@@ -1,4 +1,4 @@
-use actix::prelude::*;
+use crate::prelude::*;
 
 use serde::{Deserialize, Serialize};
 
@@ -29,7 +29,7 @@ pub enum Event {
     /// A family member was added.
     FamilyMemberInvited {
         /// The user that was added.
-        user: user::Description,
+        user: user::UserDescription,
 
         /// The unique ID of the parent that added the family member.
         by: UID,

@@ -1,26 +1,24 @@
+use crate::prelude::*;
+
+use weru::database::entity;
+
 use crate::db::values::{EmailAddress, PasswordHash, UID};
 
-entity!(
-    /// A description of a supported currency.
-    pub struct Password in Passwords {
-        /// The unique identifier of the user.
-        user_uid: UID,
+/// A description of a supported currency.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[entity(Passwords)]
+pub struct Password {
+    /// The unique identifier of the user.
+    pub user_uid: UID,
 
-        /// The stringified version of the hash.
-        hash: PasswordHash,
-    }
-);
+    /// The stringified version of the hash.
+    pub hash: PasswordHash,
+}
 
 impl Password {
     /// The SQL statement used to load a password hash by user email address.
-    const READ_BY_EMAIL: &'static str = concat!(
-        "SELECT user_uid, hash \
-        FROM Passwords \
-        LEFT JOIN Users \
-            ON Passwords.user_uid = Users.uid \
-        WHERE Users.email = ",
-        parameter!(email)
-    );
+    const READ_BY_EMAIL: &'static str =
+        sql_from_file!("Password.read-by-email");
 
     /// Loads a password using the email address of the associated user.
     ///
@@ -28,18 +26,15 @@ impl Password {
     /// returned.
     ///
     /// # Arguments
-    /// *  `e` - The database executor.
+    /// *  `tx` - The database transaction.
     /// *  `email` - The email address.
-    pub async fn read_by_email<'a, E>(
-        e: E,
+    pub async fn read_by_email<'a>(
+        tx: &mut Tx<'a>,
         email: &EmailAddress,
-    ) -> Result<Option<Self>, crate::db::Error>
-    where
-        E: ::sqlx::Executor<'a, Database = crate::db::Database>,
-    {
+    ) -> Result<Option<Self>, DatabaseError> {
         sqlx::query_as(Self::READ_BY_EMAIL)
             .bind(email)
-            .fetch_optional(e)
+            .fetch_optional(tx.as_mut())
             .await
     }
 }
@@ -54,64 +49,60 @@ entity_tests! {
             hash: PasswordHash::from_password("secret").unwrap(),
             ..e
         };
-        prepare: |c, e| {
+        prepare: |tx, e| {
             let u = crate::db::entities::user::tests::entity_with_id(
-                e.user_uid().clone(),
+                e.user_uid.clone(),
             );
-            crate::db::entities::user::tests::prepare(c, &u).await?;
-            u.create(c).await
+            crate::db::entities::user::tests::prepare(tx, &u).await?;
+            u.create(tx.as_mut()).await
         };
     }
 }
 
 #[cfg(test)]
 mod impl_tests {
-    use actix_rt;
-
     use crate::db;
-    use crate::db::entities::{Entity, User};
-    use crate::db::test_pool;
+    use crate::db::entities::*;
+    use crate::db::test_engine;
     use crate::db::values::Role;
 
     use super::*;
 
     #[actix_rt::test]
     async fn read_by_email() {
-        let pool = test_pool().await;
-        {
-            let mut connection = pool.acquire().await.unwrap();
-            let email = "test@example.com".parse::<EmailAddress>().unwrap();
-            let user = User::new(
-                UID::new(),
-                Role::Parent,
-                "Test User".into(),
-                Some(email.clone()),
-                UID::new(),
-            );
-            db::entities::user::tests::prepare(&mut connection, &user)
-                .await
-                .unwrap();
-            user.create(&mut connection).await.unwrap();
+        let database = test_engine().await;
+        let mut conn = database.connection().await.unwrap();
+        let mut tx = conn.begin().await.unwrap();
 
-            let password = Password {
-                user_uid: user.uid().clone(),
-                hash: PasswordHash::from_password("password123").unwrap(),
-            };
-            password.create(&mut connection).await.unwrap();
-
-            assert_eq!(
-                Password::read_by_email(&mut connection, &email)
-                    .await
-                    .unwrap(),
-                Some(password),
-            );
-            assert!(Password::read_by_email(
-                &mut connection,
-                &"unknown@example.com".parse().unwrap()
-            )
+        let email = "test@example.com".parse::<EmailAddress>().unwrap();
+        let user = User::new(
+            UID::new(),
+            Role::Parent,
+            "Test User".into(),
+            Some(email.clone()),
+            UID::new(),
+        );
+        db::entities::user::tests::prepare(&mut tx, &user)
             .await
-            .unwrap()
-            .is_none());
-        }
+            .unwrap();
+        user.create(tx.as_mut()).await.unwrap();
+
+        let password = Password {
+            user_uid: user.uid.clone(),
+            hash: PasswordHash::from_password("password123").unwrap(),
+        };
+        password.create(tx.as_mut()).await.unwrap();
+
+        assert_eq!(
+            Password::read_by_email(&mut tx, &email).await.unwrap(),
+            Some(password),
+        );
+        assert!(Password::read_by_email(
+            &mut tx,
+            &"unknown@example.com".parse().unwrap()
+        )
+        .await
+        .unwrap()
+        .is_none());
     }
 }

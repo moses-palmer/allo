@@ -1,34 +1,26 @@
-use sqlx::prelude::*;
-
-use std::sync::Arc;
-
-use actix_session::Session;
-use actix_web::{delete, web, Responder};
-use serde::{Deserialize, Serialize};
+use crate::prelude::*;
 
 use crate::api;
 use crate::api::notify::{Event, Notify};
 use crate::api::session::State;
-use crate::db;
-use crate::db::entities::{Entity, User};
+use crate::db::entities::User;
 use crate::db::values::{Role, UID};
-use crate::notifications::Notifier;
 
 /// Removes a member from a family.
 #[delete("family/{family_uid}/{user_uid}")]
 pub async fn handle(
-    pool: web::Data<db::Pool>,
-    notifier: web::Data<Arc<Notifier<Event>>>,
+    database: web::Data<DatabaseEngine>,
+    channel: web::Data<ChannelEngine>,
     session: Session,
     path: web::Path<(UID, UID)>,
 ) -> impl Responder {
-    let mut connection = pool.acquire().await?;
-    let mut trans = connection.begin().await?;
+    let mut connection = database.connection().await?;
+    let mut tx = connection.begin().await?;
     let state = State::load(&session)?;
     let (family_uid, user_uid) = path.into_inner();
     {
         let res =
-            execute(&mut trans, state.clone(), &family_uid, &user_uid).await?;
+            execute(&mut tx, state.clone(), &family_uid, &user_uid).await?;
         Notify::Family {
             event: Event::FamilyMemberRemoved {
                 user: res.user.clone(),
@@ -36,30 +28,30 @@ pub async fn handle(
             },
             family: state.family_uid,
         }
-        .send(&mut *trans, &notifier, &state.user_uid)
+        .send(&mut tx, &channel, &state.user_uid)
         .await;
-        trans.commit().await?;
+        tx.commit().await?;
         api::ok(res)
     }
 }
 
 pub async fn execute<'a>(
-    e: &mut api::Executor<'a>,
+    tx: &mut Tx<'a>,
     state: State,
     family_uid: &UID,
     user_uid: &UID,
 ) -> Result<Res, api::Error> {
-    let user = User::read(&mut *e, user_uid)
+    let user = User::read(tx.as_mut(), user_uid)
         .await?
         .ok_or_else(|| api::Error::not_found("unknown user"))?;
     let state = state
         .assert_role(Role::Parent)?
         .assert_family(family_uid)?
-        .assert_family(user.family_uid())?;
-    if &state.user_uid == user.uid() {
+        .assert_family(&user.family_uid)?;
+    if state.user_uid == user.uid {
         Err(api::Error::forbidden("cannot remove self"))
     } else {
-        user.delete(&mut *e).await?;
+        user.delete(tx.as_mut()).await?;
         Ok(Res { user })
     }
 }
@@ -74,32 +66,35 @@ pub struct Res {
 mod tests {
     use crate::api::tests;
     use crate::db::entities::create;
-    use crate::db::test_pool;
+    use crate::db::test_engine;
 
     use super::*;
 
     #[actix_rt::test]
     async fn success() {
-        let pool = test_pool().await;
-        let mut c = pool.acquire().await.unwrap();
-        let (family, parent, children, _, _) = tests::populate(&mut c).unwrap();
+        let database = test_engine().await;
+        let mut conn = database.connection().await.unwrap();
+        let (family, parent, children, _, _) =
+            tests::populate(&mut conn).unwrap();
 
-        let mut trans = c.begin().await.unwrap();
-        execute(
-            &mut trans,
-            State {
-                user_uid: parent.uid().clone(),
-                family_uid: family.uid().clone(),
-                role: parent.role().clone(),
-            },
-            children.0.family_uid(),
-            children.0.uid(),
-        )
-        .await
-        .unwrap();
-        trans.commit().await.unwrap();
+        {
+            let mut tx = conn.begin().await.unwrap();
+            execute(
+                &mut tx,
+                State {
+                    user_uid: parent.uid.clone(),
+                    family_uid: family.uid.clone(),
+                    role: parent.role.clone(),
+                },
+                &children.0.family_uid,
+                &children.0.uid,
+            )
+            .await
+            .unwrap();
+            tx.commit().await.unwrap();
+        }
 
-        assert!(User::read(&mut c, children.0.uid())
+        assert!(User::read(conn.as_mut(), &children.0.uid)
             .await
             .unwrap()
             .is_none());
@@ -107,83 +102,92 @@ mod tests {
 
     #[actix_rt::test]
     async fn forbidden_parent_self() {
-        let pool = test_pool().await;
-        let mut c = pool.acquire().await.unwrap();
-        let (family, parent, _, _, _) = tests::populate(&mut c).unwrap();
+        let database = test_engine().await;
+        let mut conn = database.connection().await.unwrap();
+        let (family, parent, _, _, _) = tests::populate(&mut conn).unwrap();
 
-        let mut trans = c.begin().await.unwrap();
-        let err = execute(
-            &mut trans,
-            State {
-                user_uid: parent.uid().clone(),
-                family_uid: family.uid().clone(),
-                role: parent.role().clone(),
-            },
-            parent.family_uid(),
-            parent.uid(),
-        )
-        .await
-        .err()
-        .unwrap();
-        trans.commit().await.unwrap();
+        let err = {
+            let mut tx = conn.begin().await.unwrap();
+            let r = execute(
+                &mut tx,
+                State {
+                    user_uid: parent.uid.clone(),
+                    family_uid: family.uid.clone(),
+                    role: parent.role.clone(),
+                },
+                &parent.family_uid,
+                &parent.uid,
+            )
+            .await
+            .err()
+            .unwrap();
+            tx.commit().await.unwrap();
+            r
+        };
 
         assert_eq!(err, api::Error::forbidden("cannot remove self"));
     }
 
     #[actix_rt::test]
     async fn forbidden_parent() {
-        let pool = test_pool().await;
-        let mut c = pool.acquire().await.unwrap();
-        let (family, parent, _, _, _) = tests::populate(&mut c).unwrap();
-        let other_family = create::family(&mut c, "Other Family");
+        let database = test_engine().await;
+        let mut conn = database.connection().await.unwrap();
+        let (family, parent, _, _, _) = tests::populate(&mut conn).unwrap();
+        let other_family = create::family(&mut conn, "Other Family");
         let other_child = create::user(
-            &mut c,
+            &mut conn,
             Role::Child,
             "Other User",
             "other@email.com",
-            other_family.uid(),
+            &other_family.uid,
         );
 
-        let mut trans = c.begin().await.unwrap();
-        let err = execute(
-            &mut trans,
-            State {
-                user_uid: parent.uid().clone(),
-                family_uid: family.uid().clone(),
-                role: parent.role().clone(),
-            },
-            other_child.family_uid(),
-            other_child.uid(),
-        )
-        .await
-        .err()
-        .unwrap();
-        trans.commit().await.unwrap();
+        let err = {
+            let mut tx = conn.begin().await.unwrap();
+            let r = execute(
+                &mut tx,
+                State {
+                    user_uid: parent.uid.clone(),
+                    family_uid: family.uid.clone(),
+                    role: parent.role.clone(),
+                },
+                &other_child.family_uid,
+                &other_child.uid,
+            )
+            .await
+            .err()
+            .unwrap();
+            tx.commit().await.unwrap();
+            r
+        };
 
         assert_eq!(err, api::Error::forbidden("invalid family"));
     }
 
     #[actix_rt::test]
     async fn forbidden_child() {
-        let pool = test_pool().await;
-        let mut c = pool.acquire().await.unwrap();
-        let (family, _, children, _, _) = tests::populate(&mut c).unwrap();
+        let database = test_engine().await;
+        let mut conn = database.connection().await.unwrap();
+        let (family, _, children, _, _) = tests::populate(&mut conn).unwrap();
 
-        let mut trans = c.begin().await.unwrap();
-        let err = execute(
-            &mut trans,
-            State {
-                user_uid: children.0.uid().clone(),
-                family_uid: family.uid().clone(),
-                role: children.0.role().clone(),
-            },
-            children.1.family_uid(),
-            children.1.uid(),
-        )
-        .await
-        .err()
-        .unwrap();
-        trans.commit().await.unwrap();
+        let err = {
+            let mut tx = conn.begin().await.unwrap();
+            let r = execute(
+                &mut tx,
+                State {
+                    user_uid: children.0.uid.clone(),
+                    family_uid: family.uid.clone(),
+                    role: children.0.role.clone(),
+                },
+                &children.1.family_uid,
+                &children.1.uid,
+            )
+            .await
+            .err()
+            .unwrap();
+            tx.commit().await.unwrap();
+            r
+        };
 
         assert_eq!(err, api::Error::forbidden("invalid role"));
     }

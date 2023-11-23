@@ -1,15 +1,17 @@
+use weru::database::entity;
+
 use crate::db::values::UID;
 
-entity!(
-    /// The configuration used by a family.
-    pub struct Configuration in Configurations {
-        /// The family using this configuration.
-        family_uid: UID,
+#[derive(Clone, Debug, PartialEq)]
+#[entity(Configurations)]
+/// The configuration used by a family.
+pub struct Configuration {
+    /// The family using this configuration.
+    family_uid: UID,
 
-        /// The currency name.
-        currency: String,
-    }
-);
+    /// The currency name.
+    currency: String,
+}
 
 entity_tests! {
     Configuration[UID = UID::new()] {
@@ -20,13 +22,13 @@ entity_tests! {
         modify: |e| Configuration {
             ..e
         };
-        prepare: |c, e| {
+        prepare: |tx, e| {
             crate::db::entities::family::tests::entity_with_id(
-                e.family_uid().clone(),
-            ).create(&mut *c).await?;
+                e.family_uid.clone(),
+            ).create(tx.as_mut()).await?;
             crate::db::entities::currency::tests::entity_with_id(
                 e.currency.clone(),
-            ).create(&mut *c).await
+            ).create(tx.as_mut()).await
         };
     }
 }

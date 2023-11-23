@@ -1,5 +1,4 @@
-use actix_web::{get, Responder};
-use serde::{Deserialize, Serialize};
+use crate::prelude::*;
 
 use crate::api;
 
@@ -9,7 +8,7 @@ pub async fn handle() -> impl Responder {
     api::ok(Res {
         version: env!("CARGO_PKG_VERSION").into(),
         features: vec![
-            #[cfg(feature = "email_smtp")]
+            #[cfg(feature = "email-smtp")]
             "email".into(),
         ],
     })
