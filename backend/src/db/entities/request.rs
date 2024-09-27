@@ -1,6 +1,5 @@
 use crate::prelude::*;
 
-use either::Either;
 use weru::database::entity;
 use weru::futures::StreamExt;
 
@@ -73,20 +72,18 @@ impl Request {
             .bind(amount)
             .bind(url.clone())
             .bind(time)
-            .fetch_many(tx.as_mut());
-        while let Some(e) = stream.next().await {
-            if let Either::Right(row) = e? {
-                let uid = row.get::<<Self as Entity>::Key, _>(0);
-                return Ok(Self {
-                    uid,
-                    user_uid,
-                    name,
-                    description,
-                    amount,
-                    url,
-                    time,
-                });
-            }
+            .fetch(tx.as_mut());
+        while let Some(row) = stream.next().await {
+            let uid = row?.get::<<Self as Entity>::Key, _>(0);
+            return Ok(Self {
+                uid,
+                user_uid,
+                name,
+                description,
+                amount,
+                url,
+                time,
+            });
         }
 
         Err(DatabaseError::RowNotFound)

@@ -2,7 +2,6 @@ use crate::prelude::*;
 
 use std::ops::Range;
 
-use either::Either;
 use weru::database::entity;
 use weru::futures::StreamExt;
 
@@ -69,19 +68,17 @@ impl Transaction {
             .bind(description.clone())
             .bind(amount)
             .bind(time)
-            .fetch_many(tx.as_mut());
-        while let Some(e) = stream.next().await {
-            if let Either::Right(row) = e? {
-                let uid = row.get::<<Self as Entity>::Key, _>(0);
-                return Ok(Self {
-                    uid,
-                    transaction_type,
-                    user_uid,
-                    description,
-                    amount,
-                    time,
-                });
-            }
+            .fetch(tx.as_mut());
+        while let Some(row) = stream.next().await {
+            let uid = row?.get::<<Self as Entity>::Key, _>(0);
+            return Ok(Self {
+                uid,
+                transaction_type,
+                user_uid,
+                description,
+                amount,
+                time,
+            });
         }
 
         Err(DatabaseError::RowNotFound)
