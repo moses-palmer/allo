@@ -47,7 +47,7 @@ const LOGO_SELECTOR = "#logo";
 
 
 const load = async () => {
-    const errorManager = async () => {
+    const errorManager = async (e) => {
         try {
             console.error(e, e.stack);
         } catch (e) {}
