@@ -24,7 +24,7 @@ macro_rules! value {
             &'r str: Decode<'r, Database>,
         {
             fn decode(
-                value: <Database as HasValueRef<'r>>::ValueRef,
+                value: <Database as SqlxDatabase>::ValueRef<'r>,
             ) -> Result<$type, Box<dyn Error + 'static + Send + Sync>> {
                 Ok(Self(<$inner as Decode<'r, Database>>::decode(value)?))
             }
@@ -36,8 +36,8 @@ macro_rules! value {
         {
             fn encode_by_ref(
                 &self,
-                buf: &mut <Database as HasArguments<'r>>::ArgumentBuffer,
-            ) -> IsNull {
+                buf: &mut <Database as SqlxDatabase>::ArgumentBuffer<'r>,
+            ) -> Result<IsNull, BoxDynError> {
                 <$inner as Encode<'r, Database>>::encode_by_ref(&self.0, buf)
             }
         }
@@ -61,7 +61,7 @@ macro_rules! value {
             &'r str: Decode<'r, Database>,
         {
             fn decode(
-                value: <Database as HasValueRef<'r>>::ValueRef,
+                value: <Database as SqlxDatabase>::ValueRef<'r>,
             ) -> Result<$type, Box<dyn Error + 'static + Send + Sync>> {
                 let string = <String as Decode<'r, Database>>::decode(value)?;
                 Ok(string.parse()?)
@@ -74,8 +74,8 @@ macro_rules! value {
         {
             fn encode_by_ref(
                 &self,
-                buf: &mut <Database as HasArguments<'r>>::ArgumentBuffer,
-            ) -> IsNull {
+                buf: &mut <Database as SqlxDatabase>::ArgumentBuffer<'r>,
+            ) -> Result<IsNull, BoxDynError> {
                 let string = self.to_string();
                 <String as Encode<'r, Database>>::encode_by_ref(&string, buf)
             }
@@ -94,9 +94,9 @@ mod values {
     use std::error::Error;
 
     use crate::db::values::*;
-    use weru::database::sqlx::database::{HasArguments, HasValueRef};
     use weru::database::sqlx::encode::IsNull;
-    use weru::database::sqlx::{Decode, Encode, Type};
+    use weru::database::sqlx::Database as SqlxDatabase;
+    use weru::database::sqlx::{error::BoxDynError, Decode, Encode, Type};
     use weru::database::Database;
 
     value!(CurrencyFormat => String);
