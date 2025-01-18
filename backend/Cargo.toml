@@ -5,32 +5,31 @@ authors = ["Moses Palmér <mosespalmer@gmail.com>"]
 edition = "2021"
 
 [build-dependencies]
-resvg = "0.29"
-tiny-skia = "0.8"
-usvg = "0.29"
+resvg = "0.44"
 
 [dependencies]
 actix = "*"
 actix-rt = "*"
 actix-web = "*"
-bcrypt = "0.14"
+bcrypt = "0.16"
 chrono = "0.4"
 email_address = "0.2"
 futures-util = "0.3"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sqlx = "*"
-url = "2.3"
-uuid = { version = "1.3", features = ["v4"] }
+url = "2.5"
+uuid = { version = "1.12", features = ["v4", "v7"] }
 
 [dependencies.redis]
-version = "0.22"
+version = "0.28"
 optional = true
 features = ["aio", "tokio-comp"]
 
-[dependencies.serde_cbor]
-version = "0.11"
+[dependencies.cbor4ii]
+version = "0.3"
 optional = true
+features = ["serde1"]
 
 [dependencies.serial_test]
 version = "1.0"
@@ -38,7 +37,7 @@ optional = true
 
 [dependencies.weru]
 git = "https://github.com/moses-palmer/weru"
-tag = "v0.1.0"
+rev = "74d59b471cd98a78cdd18f1583725ce27a125b63"
 
 [features]
 default = ["channel-redis", "database-sqlite", "email-smtp", "session-redis"]

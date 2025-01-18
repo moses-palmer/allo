@@ -242,6 +242,7 @@ pub mod create {
         result
     }
 
+    #[allow(static_mut_refs)]
     pub fn request(
         conn: &mut Connection,
         user_uid: &UID,
@@ -265,6 +266,7 @@ pub mod create {
         result
     }
 
+    #[allow(static_mut_refs)]
     pub fn transaction(
         conn: &mut Connection,
         transaction_type: TransactionType,
