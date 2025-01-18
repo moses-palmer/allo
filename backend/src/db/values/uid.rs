@@ -3,6 +3,8 @@ use std::fmt;
 use std::str;
 
 use serde::{Deserialize, Serialize};
+use uuid::NoContext;
+use uuid::Timestamp;
 use uuid::Uuid;
 
 /// A wrapper for unique ID's.
@@ -10,9 +12,11 @@ use uuid::Uuid;
 pub struct UID(Uuid);
 
 impl UID {
-    /// Creates a new random UID.
+    /// Creates a new semi-random UID.
+    ///
+    /// A UID is an UUIDv7, so it contains the current timestamp.
     pub fn new() -> Self {
-        Self(Uuid::new_v4())
+        Self(Uuid::new_v7(Timestamp::now(NoContext)))
     }
 }
 
