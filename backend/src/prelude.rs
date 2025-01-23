@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 pub use weru::actix::prelude::*;
 pub use weru::database::sqlx::prelude::*;
 
