@@ -1,5 +1,6 @@
 use std::fs::read_to_string;
 use std::path::{Path, PathBuf};
+use std::process;
 
 use resvg::tiny_skia::{Pixmap, Transform};
 use resvg::usvg::{Options, Tree};
@@ -24,10 +25,6 @@ where
 /// *  `target` - The target PNG.
 /// *  `size` - An explicit size. If this is not specified, the dimensions are
 ///    extracted from the source image.
-///
-/// # Panics
-/// This function will panic if any of the paths cannot be converted to a
-/// string.
 fn svg_to_png<P>(
     source: P,
     target: P,
@@ -71,10 +68,12 @@ pub fn main() {
         .parent()
         .unwrap()
         .join("templates");
-    svg_to_png(
+    if let Err(ConversionError(message)) = svg_to_png(
         frontend.join("icon.svg"),
         templates.join("logo.png"),
         Some((120, 120)),
-    )
-    .unwrap();
+    ) {
+        eprintln!("Failed to convert icon: {}", message);
+        process::exit(1);
+    }
 }
