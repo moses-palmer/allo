@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 macro_rules! entity_tests {
     (
         $entity_type:ty[$id_type:ty = $default_id:expr] {
